@@ -1,0 +1,10 @@
+
+[[sources]]
+name = "Test csv"
+type = "csv"
+path = "test.csv"
+
+[[sources]]
+name = "Test xlsx"
+type = "excel"
+path = "test.xlsx"
