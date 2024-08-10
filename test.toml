@@ -1,10 +1,20 @@
 
-[[sources]]
-name = "Test csv"
+
+[source]
+type = "join"
+how = "left"
+left_on = "Foo"
+right_on = "Foo"
+
+[source.left]
 type = "csv"
 path = "test.csv"
 
-[[sources]]
-name = "Test xlsx"
-type = "excel"
-path = "test.xlsx"
+[source.right]
+type = "csv"
+path = "test2.csv"
+
+
+[export]
+folder = "./output"
+name = "export"

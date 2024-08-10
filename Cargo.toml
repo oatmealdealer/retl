@@ -6,8 +6,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 calamine = "0.25.0"
+chrono = "0.4.38"
 clap = { version = "4.5.13", features = ["derive"] }
 polars = { version = "0.41.3", features = [
+    "csv",
     "lazy",
     "temporal",
     "streaming",
@@ -23,3 +25,4 @@ serde = "1.0.205"
 thiserror = "1.0.63"
 tokio = "1.39.2"
 toml = "0.8.19"
+typetag = "0.2.17"
