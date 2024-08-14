@@ -6,6 +6,24 @@ pub trait ToLazyFrame: Debug {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame>;
 }
 
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct DataLoader {
+    #[serde(flatten)]
+    source: Source,
+    #[serde(default)]
+    transforms: Vec<Box<dyn Transform>>,
+}
+
+impl ToLazyFrame for DataLoader {
+    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
+        let mut lf = self.source.to_lazy_frame()?;
+        for transform in self.transforms.iter() {
+            lf = transform.transform(lf)?;
+        }
+        Ok(lf)
+    }
+}
+
 impl TryFrom<&Box<dyn ToLazyFrame>> for LazyFrame {
     type Error = anyhow::Error;
     fn try_from(value: &Box<dyn ToLazyFrame>) -> std::result::Result<Self, Self::Error> {
@@ -76,9 +94,9 @@ pub enum JoinType {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct JoinSource {
-    left: Box<Source>,
+    left: Box<DataLoader>,
     left_on: String,
-    right: Box<Source>,
+    right: Box<DataLoader>,
     right_on: String,
     how: JoinType,
 }
@@ -216,7 +234,8 @@ impl Export {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Config {
-    source: Source,
+    source: DataLoader,
+    #[serde(default)]
     transforms: Vec<Box<dyn Transform>>,
     export: Export,
 }
