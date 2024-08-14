@@ -71,6 +71,7 @@ impl ToLazyFrame for CsvSource {
 pub enum JoinType {
     Inner,
     Left,
+    Right,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -93,6 +94,7 @@ impl ToLazyFrame for JoinSource {
             JoinArgs::new(match self.how {
                 JoinType::Inner => polars::prelude::JoinType::Inner,
                 JoinType::Left => polars::prelude::JoinType::Left,
+                JoinType::Right => polars::prelude::JoinType::Right,
             })
             .with_coalesce(JoinCoalesce::CoalesceColumns),
         ))
