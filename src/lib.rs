@@ -107,6 +107,11 @@ pub trait Transform: Debug {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame>;
 }
 
+#[typetag::serde(tag = "type")]
+
+pub trait Condition: Debug {
+    fn expr(&self) -> anyhow::Result<Expr>;
+}
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct Select {
     columns: Vec<String>,
@@ -132,26 +137,31 @@ impl Transform for SetHeaders {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct Filter {
+struct Match {
     column: String,
     pattern: String,
 }
 
-#[typetag::serde(name = "filter")]
-impl Transform for Filter {
+#[typetag::serde(name = "match")]
+impl Transform for Match {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
-        Ok(lf.filter(
-            col(&self.column)
-                .str()
-                .contains(lit(self.pattern.as_str()), true),
-        ))
+        Ok(lf.filter(self.expr()?))
+    }
+}
+
+#[typetag::serde(name = "match")]
+impl Condition for Match {
+    fn expr(&self) -> anyhow::Result<Expr> {
+        Ok(col(&self.column)
+            .str()
+            .contains(lit(self.pattern.as_str()), true))
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct Extract {
-    column: String,
-    pattern: String,
+    #[serde(flatten)]
+    matcher: Match,
     #[serde(default)]
     filter: bool,
 }
@@ -160,21 +170,17 @@ struct Extract {
 impl Transform for Extract {
     fn transform(&self, mut lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         if self.filter {
-            lf = lf.filter(
-                col(&self.column)
-                    .str()
-                    .contains(lit(self.pattern.as_str()), true),
-            )
+            lf = self.matcher.transform(lf)?;
         }
 
         // TODO: See if this can be done without an intermediate alias
-        let alias = format!("_{}_groups", &self.column);
+        let alias = format!("_{}_groups", &self.matcher.column);
         lf = lf
             .select([
                 col("*"),
-                col(&self.column)
+                col(&self.matcher.column)
                     .str()
-                    .extract_groups(self.pattern.as_str())?
+                    .extract_groups(self.matcher.pattern.as_str())?
                     .alias(alias.as_str()),
             ])
             .unnest(vec![alias]);
