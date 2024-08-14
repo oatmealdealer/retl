@@ -143,7 +143,7 @@ impl Transform for Filter {
         Ok(lf.filter(
             col(&self.column)
                 .str()
-                .contains(lit(self.pattern.clone()), true),
+                .contains(lit(self.pattern.as_str()), true),
         ))
     }
 }
@@ -152,6 +152,35 @@ impl Transform for Filter {
 struct Extract {
     column: String,
     pattern: String,
+    #[serde(default)]
+    filter: bool,
+}
+
+#[typetag::serde(name = "extract")]
+impl Transform for Extract {
+    fn transform(&self, mut lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+        if self.filter {
+            lf = lf.filter(
+                col(&self.column)
+                    .str()
+                    .contains(lit(self.pattern.as_str()), true),
+            )
+        }
+
+        // TODO: See if this can be done without an intermediate alias
+        let alias = format!("_{}_groups", &self.column);
+        lf = lf
+            .select([
+                col("*"),
+                col(&self.column)
+                    .str()
+                    .extract_groups(self.pattern.as_str())?
+                    .alias(alias.as_str()),
+            ])
+            .unnest(vec![alias]);
+
+        Ok(lf)
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
