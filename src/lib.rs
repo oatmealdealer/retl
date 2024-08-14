@@ -6,6 +6,12 @@ pub trait ToLazyFrame: Debug {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame>;
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("{0}")]
+    Other(String),
+}
+
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct DataLoader {
     #[serde(flatten)]
@@ -120,13 +126,11 @@ impl ToLazyFrame for JoinSource {
 }
 
 #[typetag::serde(tag = "type")]
-
 pub trait Transform: Debug {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame>;
 }
 
-#[typetag::serde(tag = "type")]
-
+#[typetag::serde]
 pub trait Condition: Debug {
     fn expr(&self) -> anyhow::Result<Expr>;
 }
@@ -143,14 +147,24 @@ impl Transform for Select {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct SetHeaders {
+struct Rename {
     columns: BTreeMap<String, String>,
 }
 
-#[typetag::serde(name = "set_headers")]
-impl Transform for SetHeaders {
+#[typetag::serde(name = "rename")]
+impl Transform for Rename {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.rename(self.columns.keys(), self.columns.values()))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct Filter(Box<dyn Condition>);
+
+#[typetag::serde(name = "filter")]
+impl Transform for Filter {
+    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+        Ok(lf.filter(self.0.expr()?))
     }
 }
 
@@ -158,13 +172,6 @@ impl Transform for SetHeaders {
 struct Match {
     column: String,
     pattern: String,
-}
-
-#[typetag::serde(name = "match")]
-impl Transform for Match {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
-        Ok(lf.filter(self.expr()?))
-    }
 }
 
 #[typetag::serde(name = "match")]
@@ -188,7 +195,7 @@ struct Extract {
 impl Transform for Extract {
     fn transform(&self, mut lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         if self.filter {
-            lf = self.matcher.transform(lf)?;
+            lf = lf.filter(self.matcher.expr()?);
         }
 
         // TODO: See if this can be done without an intermediate alias
@@ -204,6 +211,92 @@ impl Transform for Extract {
             .unnest(vec![alias]);
 
         Ok(lf)
+    }
+}
+
+// TODO: Implement these as transforms
+pub struct Sort;
+pub struct DropDuplicates;
+pub struct PrefixColumns;
+
+// TODO: Deduplicate the logic of combining these operators in the same way
+type Conditions = Vec<Box<dyn Condition>>;
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[serde(try_from = "Conditions")]
+pub struct And {
+    conditions: Conditions,
+}
+
+impl TryFrom<Conditions> for And {
+    type Error = Error;
+
+    fn try_from(value: Conditions) -> std::result::Result<Self, Self::Error> {
+        if value.len() < 2 {
+            Err(Error::Other(
+                "and statement must have at least 2 conditions".to_owned(),
+            ))
+        } else {
+            Ok(Self { conditions: value })
+        }
+    }
+}
+
+#[typetag::serde(name = "and")]
+impl Condition for And {
+    fn expr(&self) -> anyhow::Result<Expr> {
+        let mut expr: Option<Expr> = None;
+        for cond in self.conditions.iter() {
+            expr = match expr {
+                None => Some(cond.expr()?),
+                Some(ex) => Some(ex.and(cond.expr()?)),
+            }
+        }
+        match expr {
+            None => {
+                Err(Error::Other("and statement must have at least 2 conditions".to_owned()).into())
+            }
+            Some(ex) => Ok(ex),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[serde(try_from = "Conditions")]
+pub struct Or {
+    conditions: Vec<Box<dyn Condition>>,
+}
+
+impl TryFrom<Conditions> for Or {
+    type Error = Error;
+
+    fn try_from(value: Conditions) -> std::result::Result<Self, Self::Error> {
+        if value.len() < 2 {
+            Err(Error::Other(
+                "or statement must have at least 2 conditions".to_owned(),
+            ))
+        } else {
+            Ok(Self { conditions: value })
+        }
+    }
+}
+
+#[typetag::serde(name = "or")]
+impl Condition for Or {
+    fn expr(&self) -> anyhow::Result<Expr> {
+        let mut expr: Option<Expr> = None;
+        for cond in self.conditions.iter() {
+            expr = match expr {
+                None => Some(cond.expr()?),
+                Some(ex) => Some(ex.or(cond.expr()?)),
+            }
+        }
+        match expr {
+            None => {
+                Err(Error::Other("and statement must have at least 2 conditions".to_owned()).into())
+            }
+            Some(ex) => Ok(ex),
+        }
     }
 }
 
