@@ -25,7 +25,7 @@ fn it_works() {
     name = "export"
 
     "#;
-    let job: EtlJob = toml::from_str(config).unwrap();
+    let job: Config = toml::from_str(config).unwrap();
     // TODO: Fully implement PartialEq for the DataSource trait
     // otherwise, figure out a different way of testing
     // assert_eq!(

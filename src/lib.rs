@@ -1,80 +1,88 @@
 pub use anyhow::Result;
 use polars::{lazy::prelude::*, prelude::*};
-use std::path::PathBuf;
+use std::{collections::BTreeMap, fmt::Debug, path::PathBuf};
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("path {0:?} does not exist")]
-    BadPath(PathBuf),
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Eq)]
-#[serde(try_from = "PathBuf")]
-pub struct RealPathBuf(PathBuf);
-
-impl AsRef<std::path::Path> for RealPathBuf {
-    fn as_ref(&self) -> &std::path::Path {
-        self.0.as_ref()
-    }
-}
-
-impl TryFrom<PathBuf> for RealPathBuf {
-    type Error = anyhow::Error;
-
-    fn try_from(value: PathBuf) -> std::result::Result<Self, Self::Error> {
-        if value.try_exists()? {
-            Ok(Self(value.canonicalize()?))
-        } else {
-            Err(Error::BadPath(value).into())
-        }
-    }
-}
-
-#[typetag::serde(tag = "type")]
-pub trait DataSource: std::fmt::Debug {
-    // fn name(&self) -> &str;
+pub trait ToLazyFrame: Debug {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame>;
 }
 
-impl TryFrom<&Box<dyn DataSource>> for LazyFrame {
+impl TryFrom<&Box<dyn ToLazyFrame>> for LazyFrame {
     type Error = anyhow::Error;
-    fn try_from(value: &Box<dyn DataSource>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &Box<dyn ToLazyFrame>) -> std::result::Result<Self, Self::Error> {
         value.to_lazy_frame()
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct CsvSource {
-    path: RealPathBuf,
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum Source {
+    Csv(CsvSource),
+    Join(JoinSource),
 }
 
-#[typetag::serde(name = "csv")]
-impl DataSource for CsvSource {
+impl ToLazyFrame for Source {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
-        Ok(LazyCsvReader::new(&self.path)
-            .with_has_header(true)
-            .finish()?)
+        match self {
+            Self::Csv(source) => source.to_lazy_frame(),
+            Self::Join(source) => source.to_lazy_frame(),
+        }
+    }
+}
+
+impl TryFrom<Source> for LazyFrame {
+    type Error = anyhow::Error;
+    fn try_from(value: Source) -> std::result::Result<Self, Self::Error> {
+        value.to_lazy_frame()
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[serde(try_from = "char")]
+pub struct Separator(u8);
+
+impl TryFrom<char> for Separator {
+    type Error = anyhow::Error;
+
+    fn try_from(value: char) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(u8::try_from(value)?))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct CsvSource {
+    path: PathBuf,
+    separator: Option<Separator>,
+    has_header: Option<bool>,
+}
+
+impl ToLazyFrame for CsvSource {
+    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
+        let mut reader = LazyCsvReader::new(&self.path);
+        reader = reader.with_has_header(self.has_header.as_ref().unwrap_or(&true).to_owned());
+        if self.separator.is_some() {
+            reader = reader.with_separator(self.separator.as_ref().unwrap().0)
+        }
+        Ok(reader.finish()?)
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum Join {
+pub enum JoinType {
     Inner,
     Left,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct JoinSource {
-    left: Box<dyn DataSource>,
+    left: Box<Source>,
     left_on: String,
-    right: Box<dyn DataSource>,
+    right: Box<Source>,
     right_on: String,
-    how: Join,
+    how: JoinType,
 }
 
-#[typetag::serde(name = "join")]
-impl DataSource for JoinSource {
+impl ToLazyFrame for JoinSource {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
         let lf1 = self.left.to_lazy_frame()?;
         let lf2 = self.right.to_lazy_frame()?;
@@ -83,28 +91,81 @@ impl DataSource for JoinSource {
             [col(&self.left_on)],
             [col(&self.right_on)],
             JoinArgs::new(match self.how {
-                Join::Inner => JoinType::Inner,
-                Join::Left => JoinType::Left,
+                JoinType::Inner => polars::prelude::JoinType::Inner,
+                JoinType::Left => polars::prelude::JoinType::Left,
             })
             .with_coalesce(JoinCoalesce::CoalesceColumns),
         ))
     }
 }
 
+#[typetag::serde(tag = "type")]
+
+pub trait Transform: Debug {
+    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame>;
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Exporter {
+struct Select {
+    columns: Vec<String>,
+}
+
+#[typetag::serde(name = "select")]
+impl Transform for Select {
+    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+        Ok(lf.select([cols(self.columns.as_slice())]))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct SetHeaders {
+    columns: BTreeMap<String, String>,
+}
+
+#[typetag::serde(name = "set_headers")]
+impl Transform for SetHeaders {
+    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+        Ok(lf.rename(self.columns.keys(), self.columns.values()))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct Filter {
+    column: String,
+    pattern: String,
+}
+
+#[typetag::serde(name = "filter")]
+impl Transform for Filter {
+    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+        Ok(lf.filter(
+            col(&self.column)
+                .str()
+                .contains(lit(self.pattern.clone()), true),
+        ))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+struct Extract {
+    column: String,
+    pattern: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Export {
     folder: PathBuf,
     name: String,
 }
 
-impl Exporter {
+impl Export {
     pub fn export(&self, lf: LazyFrame) -> anyhow::Result<()> {
         std::fs::create_dir_all(&self.folder)?;
         let mut filename = self.folder.clone();
         filename.push(format!(
             "{}_{}.csv",
             self.name,
-            chrono::Local::now().naive_local().to_string()
+            chrono::Local::now().naive_local().format("%Y-%m-%d_%H%M%S")
         ));
         lf.sink_csv(
             &filename,
@@ -117,14 +178,18 @@ impl Exporter {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct EtlJob {
-    source: Box<dyn DataSource>,
-    export: Exporter,
+pub struct Config {
+    source: Source,
+    transforms: Vec<Box<dyn Transform>>,
+    export: Export,
 }
 
-impl EtlJob {
+impl Config {
     pub fn run(&self) -> Result<()> {
-        let lf: LazyFrame = (&self.source).try_into()?;
+        let mut lf: LazyFrame = self.source.to_lazy_frame()?;
+        for t in self.transforms.iter() {
+            lf = t.transform(lf)?;
+        }
         self.export.export(lf)?;
         Ok(())
     }

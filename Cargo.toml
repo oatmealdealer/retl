@@ -3,6 +3,8 @@ name = "retl"
 version = "0.1.0"
 edition = "2021"
 
+
+
 [dependencies]
 anyhow = "1.0.86"
 calamine = "0.25.0"
@@ -22,6 +24,7 @@ polars = { version = "0.41.3", features = [
     "dtype-full",
 ] }
 serde = "1.0.205"
+serde_json = "1.0.124"
 thiserror = "1.0.63"
 tokio = "1.39.2"
 toml = "0.8.19"

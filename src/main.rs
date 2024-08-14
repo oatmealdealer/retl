@@ -1,15 +1,24 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use retl::{EtlJob, Result};
+use retl::{Config, Result};
 
 #[derive(Parser)]
-struct Args {
+enum Cli {
+    /// Run a given configuration.
+    Run(RunArgs),
+}
+
+#[derive(Parser)]
+struct RunArgs {
     config: PathBuf,
 }
 fn main() -> Result<()> {
-    let args = Args::parse();
-    let file = std::fs::read_to_string(args.config)?;
-    let job: EtlJob = toml::from_str(&file)?;
-    job.run()
+    match Cli::parse() {
+        Cli::Run(args) => {
+            let file = std::fs::read_to_string(args.config)?;
+            let job: Config = toml::from_str(&file)?;
+            job.run()
+        }
+    }
 }
