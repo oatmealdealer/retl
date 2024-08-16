@@ -1,10 +1,22 @@
 use crate::Error;
-use polars::lazy::prelude::*;
+use anyhow::Context;
+use polars::{lazy::prelude::*, prelude::*};
 use std::fmt::Debug;
 
 #[typetag::serde]
-pub trait Condition: Debug {
+pub trait ToExpr: Debug {
     fn expr(&self) -> anyhow::Result<Expr>;
+}
+
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq, Hash)]
+pub struct Column(SmartString);
+
+#[typetag::serde(name = "column")]
+impl ToExpr for Column {
+    fn expr(&self) -> anyhow::Result<Expr> {
+        Ok(col(self.0.as_str()))
+    }
 }
 
 
@@ -15,7 +27,7 @@ pub struct Match {
 }
 
 #[typetag::serde(name = "match")]
-impl Condition for Match {
+impl ToExpr for Match {
     fn expr(&self) -> anyhow::Result<Expr> {
         Ok(col(&self.column)
             .str()
@@ -23,7 +35,7 @@ impl Condition for Match {
     }
 }
 
-type Conditions = Vec<Box<dyn Condition>>;
+type Conditions = Vec<Box<dyn ToExpr>>;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(try_from = "Conditions")]
@@ -46,7 +58,7 @@ impl TryFrom<Conditions> for And {
 }
 
 #[typetag::serde(name = "and")]
-impl Condition for And {
+impl ToExpr for And {
     fn expr(&self) -> anyhow::Result<Expr> {
         let mut expr: Option<Expr> = None;
         for cond in self.conditions.iter() {
@@ -55,19 +67,14 @@ impl Condition for And {
                 Some(ex) => Some(ex.and(cond.expr()?)),
             }
         }
-        match expr {
-            None => {
-                Err(Error::Other("and statement must have at least 2 conditions".to_owned()).into())
-            }
-            Some(ex) => Ok(ex),
-        }
+        expr.context("and statement must have at least 2 conditions")
     }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[serde(try_from = "Conditions")]
 pub struct Or {
-    conditions: Vec<Box<dyn Condition>>,
+    conditions: Vec<Box<dyn ToExpr>>,
 }
 
 impl TryFrom<Conditions> for Or {
@@ -85,7 +92,7 @@ impl TryFrom<Conditions> for Or {
 }
 
 #[typetag::serde(name = "or")]
-impl Condition for Or {
+impl ToExpr for Or {
     fn expr(&self) -> anyhow::Result<Expr> {
         let mut expr: Option<Expr> = None;
         for cond in self.conditions.iter() {
@@ -94,11 +101,6 @@ impl Condition for Or {
                 Some(ex) => Some(ex.or(cond.expr()?)),
             }
         }
-        match expr {
-            None => {
-                Err(Error::Other("and statement must have at least 2 conditions".to_owned()).into())
-            }
-            Some(ex) => Ok(ex),
-        }
+        expr.context("or statement must have at least 2 conditions")
     }
 }

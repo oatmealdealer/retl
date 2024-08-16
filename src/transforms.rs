@@ -1,8 +1,5 @@
-
-use polars::{lazy::prelude::*, prelude::*};
+use crate::{expressions::Match, prelude::*, ColMap, ToExpr};
 use std::{collections::BTreeMap, fmt::Debug};
-
-use crate::{conditions::Match, Condition};
 
 #[typetag::serde]
 pub trait Transform: Debug {
@@ -10,14 +7,19 @@ pub trait Transform: Debug {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Select {
-    columns: Vec<String>,
-}
+pub struct Select(ColMap);
 
 #[typetag::serde(name = "select")]
 impl Transform for Select {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
-        Ok(lf.select([cols(self.columns.as_slice())]))
+        Ok(lf.select(
+            self.0
+                 .0
+                .iter()
+                .map(|(k, v)| v.iter().try_fold(k.expr()?, |expr, op| op.expr(expr)))
+                .collect::<Result<Vec<Expr>, _>>()?
+                .as_slice(),
+        ))
     }
 }
 
@@ -44,15 +46,22 @@ impl Transform for Rename {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-struct Filter(Box<dyn Condition>);
+struct Filter(ColMap);
 
 #[typetag::serde(name = "filter")]
 impl Transform for Filter {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
-        Ok(lf.filter(self.0.expr()?))
+        Ok(self
+            .0
+             .0
+            .iter()
+            .try_fold(lf, |lf, (k, v)| -> anyhow::Result<LazyFrame> {
+                anyhow::Result::Ok(
+                    lf.filter(v.iter().try_fold(k.expr()?, |expr, op| op.expr(expr))?),
+                )
+            })?)
     }
 }
-
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 struct Extract {
@@ -82,6 +91,16 @@ impl Transform for Extract {
             .unnest(vec![alias]);
 
         Ok(lf)
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+struct Unnest(Vec<String>);
+
+#[typetag::serde(name = "unnest")]
+impl Transform for Unnest {
+    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+        Ok(lf.unnest(&self.0))
     }
 }
 

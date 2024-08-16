@@ -1671,6 +1671,7 @@ dependencies = [
  "calamine",
  "chrono",
  "clap",
+ "indexmap",
  "polars",
  "regex",
  "serde",

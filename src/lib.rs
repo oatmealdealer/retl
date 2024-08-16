@@ -1,12 +1,22 @@
-pub mod conditions;
 pub mod exports;
+pub mod expressions;
+pub mod ops;
 pub mod sources;
 pub mod transforms;
-
-pub use crate::{conditions::Condition, exports::Export, sources::Loader, transforms::Transform};
+pub mod prelude {
+    pub use crate::{
+        exports::Export,
+        expressions::{Column, ToExpr},
+        ops::{Op, Ops},
+        sources::Loader,
+        transforms::Transform,
+    };
+    pub use polars::{lazy::prelude::*, prelude::*};
+}
 pub use anyhow::Result;
+pub use prelude::*;
 
-use polars::lazy::prelude::*;
+use indexmap::IndexMap;
 use std::fmt::Debug;
 
 #[derive(Debug, thiserror::Error)]
@@ -14,6 +24,9 @@ pub enum Error {
     #[error("{0}")]
     Other(String),
 }
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct ColMap(IndexMap<Column, Ops>);
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Config {
