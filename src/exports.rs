@@ -1,7 +1,7 @@
 use polars::lazy::prelude::*;
 use std::fmt::Debug;
 
-use crate::types::CanonicalPathBuf;
+use crate::types::CanonicalDirectory;
 
 #[typetag::serde(tag = "type")]
 pub trait Export: Debug {
@@ -9,7 +9,7 @@ pub trait Export: Debug {
 }
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CsvExport {
-    folder: CanonicalPathBuf,
+    folder: CanonicalDirectory,
     name: String,
 }
 

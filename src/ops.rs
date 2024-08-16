@@ -40,6 +40,29 @@ impl Op for Contains {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct IsNotNull {}
+
+#[typetag::serde(name = "is_not_null")]
+impl Op for IsNotNull {
+    fn expr(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.is_not_null())
+    }
+}
+
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct IsNull {}
+
+#[typetag::serde(name = "is_null")]
+impl Op for IsNull {
+    fn expr(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.is_null())
+    }
+}
+
+
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Or(ColMap);
 
 #[typetag::serde(name = "or")]
