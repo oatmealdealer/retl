@@ -15,13 +15,6 @@ struct RunArgs {
 }
 fn main() -> Result<()> {
     match Cli::parse() {
-        Cli::Run(args) => {
-            let file = std::fs::read_to_string(&args.config)?;
-            let job: Config = toml::from_str(&file)?;
-            if let Some(dir) = args.config.canonicalize()?.parent() {
-                std::env::set_current_dir(dir)?;
-            }
-            job.run()
-        }
+        Cli::Run(args) => Config::from_path(&args.config)?.run(),
     }
 }

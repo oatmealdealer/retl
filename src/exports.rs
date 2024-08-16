@@ -1,6 +1,7 @@
 use polars::lazy::prelude::*;
 use std::fmt::Debug;
-use std::path::PathBuf;
+
+use crate::types::CanonicalPathBuf;
 
 #[typetag::serde(tag = "type")]
 pub trait Export: Debug {
@@ -8,7 +9,7 @@ pub trait Export: Debug {
 }
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CsvExport {
-    folder: PathBuf,
+    folder: CanonicalPathBuf,
     name: String,
 }
 
@@ -16,7 +17,7 @@ pub struct CsvExport {
 impl Export for CsvExport {
     fn export(&self, lf: LazyFrame) -> anyhow::Result<()> {
         std::fs::create_dir_all(&self.folder)?;
-        let mut filename = self.folder.clone();
+        let mut filename = self.folder.0.clone();
         filename.push(format!(
             "{}_{}.csv",
             self.name,

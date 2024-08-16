@@ -1,6 +1,6 @@
-use crate::Transform;
+use crate::{types::CanonicalPathBuf, Config, Transform};
 use polars::{lazy::prelude::*, prelude::*};
-use std::{fmt::Debug, path::PathBuf};
+use std::fmt::Debug;
 
 #[typetag::serde(tag = "type")]
 pub trait Source: Debug {
@@ -46,7 +46,7 @@ impl TryFrom<char> for Separator {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CsvSource {
-    path: PathBuf,
+    path: CanonicalPathBuf,
     separator: Option<Separator>,
     has_header: Option<bool>,
     schema: Option<Schema>,
@@ -73,6 +73,7 @@ pub enum JoinType {
     Inner,
     Left,
     Right,
+    Full,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -97,8 +98,21 @@ impl Source for JoinSource {
                 JoinType::Inner => polars::prelude::JoinType::Inner,
                 JoinType::Left => polars::prelude::JoinType::Left,
                 JoinType::Right => polars::prelude::JoinType::Right,
+                JoinType::Full => polars::prelude::JoinType::Full,
             })
             .with_coalesce(JoinCoalesce::CoalesceColumns),
         ))
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct ConfigSource {
+    path: CanonicalPathBuf,
+}
+
+#[typetag::serde(name = "config")]
+impl Source for ConfigSource {
+    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
+        Config::from_path(&self.path)?.load()
     }
 }
