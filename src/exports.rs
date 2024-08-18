@@ -1,19 +1,33 @@
 use polars::lazy::prelude::*;
+use schemars::JsonSchema;
 use std::fmt::Debug;
 
-use crate::types::CanonicalDirectory;
+use crate::{types::CanonicalDirectory, Result};
 
-#[typetag::serde(tag = "type")]
 pub trait Export: Debug {
     fn export(&self, lf: LazyFrame) -> anyhow::Result<()>;
 }
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ExportItem {
+    Csv(CsvExport),
+}
+
+impl ExportItem {
+    pub fn export(&self, lf: LazyFrame) -> Result<()> {
+        match self {
+            Self::Csv(export) => export.export(lf),
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct CsvExport {
     folder: CanonicalDirectory,
     name: String,
 }
 
-#[typetag::serde(name = "csv")]
 impl Export for CsvExport {
     fn export(&self, lf: LazyFrame) -> anyhow::Result<()> {
         std::fs::create_dir_all(&self.folder)?;

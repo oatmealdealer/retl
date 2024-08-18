@@ -1,48 +1,67 @@
 use std::fmt::Debug;
 
+use schemars::JsonSchema;
+
 use crate::{prelude::*, ColMap, Result, ToExpr};
 
-#[typetag::serde]
 pub trait Op: Debug {
     fn expr(&self, expr: Expr) -> Result<Expr>;
 }
 
-pub type Ops = Vec<Box<dyn Op>>;
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OpItem {
+    ExtractGroups(ExtractGroups),
+    Alias(Alias),
+    Contains(Contains),
+    IsNull(IsNull),
+    Or(Or),
+    And(And),
+}
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+impl OpItem {
+    pub fn expr(&self, expr: Expr) -> Result<Expr> {
+        match self {
+            Self::ExtractGroups(op) => op.expr(expr),
+            Self::Alias(op) => op.expr(expr),
+            Self::Contains(op) => op.expr(expr),
+            Self::IsNull(op) => op.expr(expr),
+            Self::Or(op) => op.expr(expr),
+            Self::And(op) => op.expr(expr),
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct ExtractGroups(String);
 
-#[typetag::serde(name = "extract_groups")]
 impl Op for ExtractGroups {
     fn expr(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.str().extract_groups(&self.0)?)
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct Alias(String);
 
-#[typetag::serde(name = "alias")]
 impl Op for Alias {
     fn expr(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.alias(&self.0))
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct Contains(String);
 
-#[typetag::serde(name = "contains")]
 impl Op for Contains {
     fn expr(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.str().contains(lit(self.0.as_str()), true))
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct IsNull(bool);
 
-#[typetag::serde(name = "is_null")]
 impl Op for IsNull {
     fn expr(&self, expr: Expr) -> Result<Expr> {
         Ok(if self.0 {
@@ -53,15 +72,14 @@ impl Op for IsNull {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct Or(ColMap);
 
-#[typetag::serde(name = "or")]
 impl Op for Or {
     fn expr(&self, expr: Expr) -> Result<Expr> {
         Ok(self
             .0
-             .0
+            .inner
             .iter()
             .try_fold(expr, |chain, (name, ops)| -> Result<Expr> {
                 Ok(chain.or(ops
@@ -71,15 +89,14 @@ impl Op for Or {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct And(ColMap);
 
-#[typetag::serde(name = "and")]
 impl Op for And {
     fn expr(&self, expr: Expr) -> Result<Expr> {
         Ok(self
             .0
-             .0
+            .inner
             .iter()
             .try_fold(expr, |chain, (name, ops)| -> Result<Expr> {
                 Ok(chain.and(

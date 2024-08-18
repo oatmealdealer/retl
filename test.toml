@@ -1,4 +1,4 @@
-
+#:schema schema.json
 
 [source]
 type = "join"
@@ -15,6 +15,7 @@ type = "csv"
 path = "test2.csv"
 
 
-[export]
+[[exports]]
+type = "csv"
 folder = "./output"
 name = "export"

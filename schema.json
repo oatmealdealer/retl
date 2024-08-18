@@ -1,0 +1,504 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Config",
+  "type": "object",
+  "required": [
+    "source"
+  ],
+  "properties": {
+    "exports": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExportItem"
+      }
+    },
+    "source": {
+      "$ref": "#/definitions/Loader"
+    },
+    "transforms": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TransformItem"
+      }
+    }
+  },
+  "definitions": {
+    "Alias": {
+      "type": "string"
+    },
+    "And": {
+      "$ref": "#/definitions/ColMap"
+    },
+    "CanonicalDirectory": {
+      "type": "string"
+    },
+    "ColMap": {
+      "type": [
+        "object",
+        "array"
+      ],
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "$ref": "#/definitions/Column"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/OpItem"
+            }
+          }
+        ],
+        "maxItems": 2,
+        "minItems": 2
+      }
+    },
+    "Column": {
+      "type": "string"
+    },
+    "Contains": {
+      "type": "string"
+    },
+    "DropDuplicates": {
+      "type": "object",
+      "properties": {
+        "keep": {
+          "default": "any",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DuplicateKeep"
+            }
+          ]
+        },
+        "subset": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DuplicateKeep": {
+      "type": "string",
+      "enum": [
+        "first",
+        "last",
+        "any",
+        "none"
+      ]
+    },
+    "ExportItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "folder",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "folder": {
+              "$ref": "#/definitions/CanonicalDirectory"
+            },
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "csv"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "Extract": {
+      "type": "object",
+      "required": [
+        "column",
+        "pattern"
+      ],
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "filter": {
+          "default": false,
+          "type": "boolean"
+        },
+        "pattern": {
+          "type": "string"
+        }
+      }
+    },
+    "ExtractGroups": {
+      "type": "string"
+    },
+    "Filter": {
+      "$ref": "#/definitions/ColMap"
+    },
+    "IsNull": {
+      "type": "boolean"
+    },
+    "JoinType": {
+      "type": "string",
+      "enum": [
+        "inner",
+        "left",
+        "right",
+        "full"
+      ]
+    },
+    "Loader": {
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "path",
+            "type"
+          ],
+          "properties": {
+            "has_header": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Schema"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "separator": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Separator"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "csv"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "how",
+            "left",
+            "left_on",
+            "right",
+            "right_on",
+            "type"
+          ],
+          "properties": {
+            "how": {
+              "$ref": "#/definitions/JoinType"
+            },
+            "left": {
+              "$ref": "#/definitions/Loader"
+            },
+            "left_on": {
+              "type": "string"
+            },
+            "right": {
+              "$ref": "#/definitions/Loader"
+            },
+            "right_on": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "join"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "path",
+            "type"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "config"
+              ]
+            }
+          }
+        }
+      ],
+      "properties": {
+        "transforms": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TransformItem"
+          }
+        }
+      }
+    },
+    "OpItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "extract_groups"
+          ],
+          "properties": {
+            "extract_groups": {
+              "$ref": "#/definitions/ExtractGroups"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "alias"
+          ],
+          "properties": {
+            "alias": {
+              "$ref": "#/definitions/Alias"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "contains"
+          ],
+          "properties": {
+            "contains": {
+              "$ref": "#/definitions/Contains"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "is_null"
+          ],
+          "properties": {
+            "is_null": {
+              "$ref": "#/definitions/IsNull"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "or"
+          ],
+          "properties": {
+            "or": {
+              "$ref": "#/definitions/Or"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "and"
+          ],
+          "properties": {
+            "and": {
+              "$ref": "#/definitions/And"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Or": {
+      "$ref": "#/definitions/ColMap"
+    },
+    "Rename": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "map"
+          ],
+          "properties": {
+            "map": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "prefix"
+          ],
+          "properties": {
+            "prefix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Schema": true,
+    "Select": {
+      "$ref": "#/definitions/ColMap"
+    },
+    "Separator": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0.0
+    },
+    "Sort": {
+      "type": "object",
+      "required": [
+        "column"
+      ],
+      "properties": {
+        "column": {
+          "type": "string"
+        },
+        "descending": {
+          "default": false,
+          "type": "boolean"
+        }
+      }
+    },
+    "SortBy": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Sort"
+      }
+    },
+    "TransformItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "select"
+          ],
+          "properties": {
+            "select": {
+              "$ref": "#/definitions/Select"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "rename"
+          ],
+          "properties": {
+            "rename": {
+              "$ref": "#/definitions/Rename"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "filter"
+          ],
+          "properties": {
+            "filter": {
+              "$ref": "#/definitions/Filter"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "extract"
+          ],
+          "properties": {
+            "extract": {
+              "$ref": "#/definitions/Extract"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "unnest"
+          ],
+          "properties": {
+            "unnest": {
+              "$ref": "#/definitions/Unnest"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "sort_by"
+          ],
+          "properties": {
+            "sort_by": {
+              "$ref": "#/definitions/SortBy"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "drop_duplicates"
+          ],
+          "properties": {
+            "drop_duplicates": {
+              "$ref": "#/definitions/DropDuplicates"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Unnest": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

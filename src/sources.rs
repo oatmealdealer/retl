@@ -1,18 +1,36 @@
-use crate::{types::CanonicalPathBuf, Config, Transform};
+use crate::{transforms::TransformItem, types::CanonicalPathBuf, Config, Result};
 use polars::{lazy::prelude::*, prelude::*};
-use std::fmt::Debug;
+use schemars::JsonSchema;
+use std::{collections::HashMap, fmt::Debug, path::PathBuf};
 
-#[typetag::serde(tag = "type")]
 pub trait Source: Debug {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame>;
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum SourceItem {
+    Csv(CsvSource),
+    Join(JoinSource),
+    Config(ConfigSource),
+}
+
+impl SourceItem {
+    pub fn to_lazy_frame(&self) -> Result<LazyFrame> {
+        match self {
+            Self::Csv(source) => source.to_lazy_frame(),
+            Self::Join(source) => source.to_lazy_frame(),
+            Self::Config(source) => source.to_lazy_frame(),
+        }
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 pub struct Loader {
     #[serde(flatten)]
-    source: Box<dyn Source>,
+    source: SourceItem,
     #[serde(default)]
-    transforms: Vec<Box<dyn Transform>>,
+    transforms: Vec<TransformItem>,
 }
 
 impl Loader {
@@ -32,7 +50,7 @@ impl TryFrom<&Box<dyn Source>> for LazyFrame {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 #[serde(try_from = "char")]
 pub struct Separator(u8);
 
@@ -45,14 +63,25 @@ impl TryFrom<char> for Separator {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct Schema(polars::prelude::Schema);
+
+impl JsonSchema for Schema {
+    fn schema_name() -> String {
+        "Schema".to_owned()
+    }
+    fn json_schema(_: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Bool(true)
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct CsvSource {
-    path: CanonicalPathBuf,
+    path: PathBuf,
     separator: Option<Separator>,
     has_header: Option<bool>,
     schema: Option<Schema>,
 }
 
-#[typetag::serde(name = "csv")]
 impl Source for CsvSource {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
         let mut reader = LazyCsvReader::new(&self.path);
@@ -62,12 +91,12 @@ impl Source for CsvSource {
         }
         reader = reader
             .with_truncate_ragged_lines(true)
-            .with_schema(self.schema.as_ref().map(|s| Arc::new(s.clone())));
+            .with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum JoinType {
     Inner,
@@ -76,7 +105,7 @@ pub enum JoinType {
     Full,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct JoinSource {
     left: Box<Loader>,
     left_on: String,
@@ -85,7 +114,6 @@ pub struct JoinSource {
     how: JoinType,
 }
 
-#[typetag::serde(name = "join")]
 impl Source for JoinSource {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
         let lf1 = self.left.load()?;
@@ -105,12 +133,11 @@ impl Source for JoinSource {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct ConfigSource {
-    path: CanonicalPathBuf,
+    path: PathBuf,
 }
 
-#[typetag::serde(name = "config")]
 impl Source for ConfigSource {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
         Config::from_path(&self.path)?.load()

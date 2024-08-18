@@ -1,20 +1,46 @@
-use crate::{expressions::Match, prelude::*, ColMap, ToExpr};
+use schemars::JsonSchema;
+
+use crate::{expressions::Match, prelude::*, ColMap, Result, ToExpr};
 use std::{collections::BTreeMap, fmt::Debug};
 
-#[typetag::serde]
 pub trait Transform: Debug {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame>;
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TransformItem {
+    Select(Select),
+    Rename(Rename),
+    Filter(Filter),
+    Extract(Extract),
+    Unnest(Unnest),
+    SortBy(SortBy),
+    DropDuplicates(DropDuplicates),
+}
+
+impl TransformItem {
+    pub fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        match self {
+            Self::Select(transform) => transform.transform(lf),
+            Self::Rename(transform) => transform.transform(lf),
+            Self::Filter(transform) => transform.transform(lf),
+            Self::Extract(transform) => transform.transform(lf),
+            Self::Unnest(transform) => transform.transform(lf),
+            Self::SortBy(transform) => transform.transform(lf),
+            Self::DropDuplicates(transform) => transform.transform(lf),
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct Select(ColMap);
 
-#[typetag::serde(name = "select")]
 impl Transform for Select {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.select(
             self.0
-                 .0
+                .inner
                 .iter()
                 .map(|(k, v)| v.iter().try_fold(k.expr()?, |expr, op| op.expr(expr)))
                 .collect::<Result<Vec<Expr>, _>>()?
@@ -23,14 +49,13 @@ impl Transform for Select {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Rename {
     Map(BTreeMap<String, String>),
     Prefix(String),
 }
 
-#[typetag::serde(name = "rename")]
 impl Transform for Rename {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         match self {
@@ -45,15 +70,14 @@ impl Transform for Rename {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 struct Filter(ColMap);
 
-#[typetag::serde(name = "filter")]
 impl Transform for Filter {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(self
             .0
-             .0
+            .inner
             .iter()
             .try_fold(lf, |lf, (k, v)| -> anyhow::Result<LazyFrame> {
                 anyhow::Result::Ok(
@@ -63,7 +87,7 @@ impl Transform for Filter {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 struct Extract {
     #[serde(flatten)]
     matcher: Match,
@@ -71,7 +95,6 @@ struct Extract {
     filter: bool,
 }
 
-#[typetag::serde(name = "extract")]
 impl Transform for Extract {
     fn transform(&self, mut lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         if self.filter {
@@ -94,27 +117,25 @@ impl Transform for Extract {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 struct Unnest(Vec<String>);
 
-#[typetag::serde(name = "unnest")]
 impl Transform for Unnest {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.unnest(&self.0))
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 pub struct Sort {
     column: String,
     #[serde(default)]
     descending: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 pub struct SortBy(Vec<Sort>);
 
-#[typetag::serde(name = "sort_by")]
 impl Transform for SortBy {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.sort_by_exprs(
@@ -128,7 +149,7 @@ impl Transform for SortBy {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, Default)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DuplicateKeep {
     First,
@@ -149,14 +170,13 @@ impl From<&DuplicateKeep> for UniqueKeepStrategy {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 pub struct DropDuplicates {
     subset: Option<Vec<String>>,
     #[serde(default)]
     keep: DuplicateKeep,
 }
 
-#[typetag::serde(name = "drop_duplicates")]
 impl Transform for DropDuplicates {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.unique(self.subset.clone(), UniqueKeepStrategy::from(&self.keep)))

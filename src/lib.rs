@@ -1,3 +1,4 @@
+extern crate tuple_vec_map;
 pub mod exports;
 pub mod expressions;
 pub mod ops;
@@ -8,20 +9,24 @@ pub mod prelude {
     pub use crate::{
         exports::Export,
         expressions::{Column, ToExpr},
-        ops::{Op, Ops},
+        ops::Op,
         sources::Loader,
         transforms::Transform,
     };
     pub use polars::{lazy::prelude::*, prelude::*};
 }
 pub use anyhow::Result;
+use exports::ExportItem;
+use ops::OpItem;
 pub use prelude::*;
 
 use indexmap::IndexMap;
+use schemars::JsonSchema;
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
 };
+use transforms::TransformItem;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -31,16 +36,23 @@ pub enum Error {
     BadPath(PathBuf),
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct ColMap(IndexMap<Column, Ops>);
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+pub struct ColMap {
+    #[serde(
+        flatten,
+        serialize_with = "tuple_vec_map::serialize",
+        deserialize_with = "tuple_vec_map::deserialize"
+    )]
+    inner: Vec<(Column, Vec<OpItem>)>,
+}
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct Config {
     source: Loader,
     #[serde(default)]
-    transforms: Vec<Box<dyn Transform>>,
+    transforms: Vec<TransformItem>,
     #[serde(default)]
-    exports: Vec<Box<dyn Export>>,
+    exports: Vec<ExportItem>,
 }
 
 impl Config {

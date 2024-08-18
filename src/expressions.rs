@@ -1,32 +1,48 @@
-use crate::Error;
+use crate::{Error, Result};
 use anyhow::Context;
 use polars::{lazy::prelude::*, prelude::*};
+use schemars::JsonSchema;
 use std::fmt::Debug;
 
-#[typetag::serde]
 pub trait ToExpr: Debug {
     fn expr(&self) -> anyhow::Result<Expr>;
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ToExprItem {
+    Column(Column),
+    Match(Match),
+    And(And),
+    Or(Or),
+}
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq, Hash)]
-pub struct Column(SmartString);
+impl ToExprItem {
+    pub fn expr(&self) -> Result<Expr> {
+        match self {
+            Self::Column(expr) => expr.expr(),
+            Self::Match(expr) => expr.expr(),
+            Self::And(expr) => expr.expr(),
+            Self::Or(expr) => expr.expr(),
+        }
+    }
+}
 
-#[typetag::serde(name = "column")]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
+pub struct Column(String);
+
 impl ToExpr for Column {
     fn expr(&self) -> anyhow::Result<Expr> {
         Ok(col(self.0.as_str()))
     }
 }
 
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct Match {
     pub column: String,
     pub pattern: String,
 }
 
-#[typetag::serde(name = "match")]
 impl ToExpr for Match {
     fn expr(&self) -> anyhow::Result<Expr> {
         Ok(col(&self.column)
@@ -35,9 +51,9 @@ impl ToExpr for Match {
     }
 }
 
-type Conditions = Vec<Box<dyn ToExpr>>;
+type Conditions = Vec<ToExprItem>;
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
 pub struct And {
     conditions: Conditions,
@@ -57,7 +73,6 @@ impl TryFrom<Conditions> for And {
     }
 }
 
-#[typetag::serde(name = "and")]
 impl ToExpr for And {
     fn expr(&self) -> anyhow::Result<Expr> {
         let mut expr: Option<Expr> = None;
@@ -71,10 +86,10 @@ impl ToExpr for And {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
 pub struct Or {
-    conditions: Vec<Box<dyn ToExpr>>,
+    conditions: Vec<ToExprItem>,
 }
 
 impl TryFrom<Conditions> for Or {
@@ -91,7 +106,6 @@ impl TryFrom<Conditions> for Or {
     }
 }
 
-#[typetag::serde(name = "or")]
 impl ToExpr for Or {
     fn expr(&self) -> anyhow::Result<Expr> {
         let mut expr: Option<Expr> = None;

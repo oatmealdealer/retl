@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Eq, Clone)]
+use schemars::JsonSchema;
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Eq, Clone, JsonSchema)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPathBuf(pub PathBuf);
 
@@ -18,7 +20,7 @@ impl TryFrom<PathBuf> for CanonicalPathBuf {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Eq, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Eq, Clone, JsonSchema)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalDirectory(pub PathBuf);
 
