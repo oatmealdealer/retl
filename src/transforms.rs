@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 
-use crate::{expressions::Match, prelude::*, ColMap, Result, ToExpr};
+use crate::{expressions::Match, prelude::*, sources::JoinType, ColMap, Result, ToExpr};
 use std::{collections::BTreeMap, fmt::Debug};
 
 pub trait Transform: Debug {
@@ -17,6 +17,7 @@ pub enum TransformItem {
     Unnest(Unnest),
     SortBy(SortBy),
     DropDuplicates(DropDuplicates),
+    Join(Join),
 }
 
 impl TransformItem {
@@ -29,6 +30,7 @@ impl TransformItem {
             Self::Unnest(transform) => transform.transform(lf),
             Self::SortBy(transform) => transform.transform(lf),
             Self::DropDuplicates(transform) => transform.transform(lf),
+            Self::Join(transform) => transform.transform(lf),
         }
     }
 }
@@ -180,5 +182,31 @@ pub struct DropDuplicates {
 impl Transform for DropDuplicates {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.unique(self.subset.clone(), UniqueKeepStrategy::from(&self.keep)))
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
+pub struct Join {
+    right: Box<Loader>,
+    left_on: String,
+    right_on: String,
+    how: JoinType,
+}
+
+impl Transform for Join {
+    fn transform(&self, lf1: LazyFrame) -> anyhow::Result<LazyFrame> {
+        let lf2 = self.right.load()?;
+        Ok(lf1.join(
+            lf2,
+            [col(&self.left_on)],
+            [col(&self.right_on)],
+            JoinArgs::new(match self.how {
+                JoinType::Inner => polars::prelude::JoinType::Inner,
+                JoinType::Left => polars::prelude::JoinType::Left,
+                JoinType::Right => polars::prelude::JoinType::Right,
+                JoinType::Full => polars::prelude::JoinType::Full,
+            })
+            .with_coalesce(JoinCoalesce::CoalesceColumns),
+        ))
     }
 }

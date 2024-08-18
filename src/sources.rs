@@ -8,7 +8,7 @@ pub trait Source: Debug {
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum SourceItem {
     Csv(CsvSource),
     Join(JoinSource),

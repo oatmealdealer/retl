@@ -59,8 +59,56 @@
     "Column": {
       "type": "string"
     },
+    "ConfigSource": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      }
+    },
     "Contains": {
       "type": "string"
+    },
+    "CsvSource": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "has_header": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Schema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "separator": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Separator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     },
     "DropDuplicates": {
       "type": "object",
@@ -147,6 +195,56 @@
     "IsNull": {
       "type": "boolean"
     },
+    "Join": {
+      "type": "object",
+      "required": [
+        "how",
+        "left_on",
+        "right",
+        "right_on"
+      ],
+      "properties": {
+        "how": {
+          "$ref": "#/definitions/JoinType"
+        },
+        "left_on": {
+          "type": "string"
+        },
+        "right": {
+          "$ref": "#/definitions/Loader"
+        },
+        "right_on": {
+          "type": "string"
+        }
+      }
+    },
+    "JoinSource": {
+      "type": "object",
+      "required": [
+        "how",
+        "left",
+        "left_on",
+        "right",
+        "right_on"
+      ],
+      "properties": {
+        "how": {
+          "$ref": "#/definitions/JoinType"
+        },
+        "left": {
+          "$ref": "#/definitions/Loader"
+        },
+        "left_on": {
+          "type": "string"
+        },
+        "right": {
+          "$ref": "#/definitions/Loader"
+        },
+        "right_on": {
+          "type": "string"
+        }
+      }
+    },
     "JoinType": {
       "type": "string",
       "enum": [
@@ -162,98 +260,38 @@
         {
           "type": "object",
           "required": [
-            "path",
-            "type"
+            "csv"
           ],
           "properties": {
-            "has_header": {
-              "type": [
-                "boolean",
-                "null"
-              ]
-            },
-            "path": {
-              "type": "string"
-            },
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Schema"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "separator": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/Separator"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "csv"
-              ]
+            "csv": {
+              "$ref": "#/definitions/CsvSource"
             }
-          }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
           "required": [
-            "how",
-            "left",
-            "left_on",
-            "right",
-            "right_on",
-            "type"
+            "join"
           ],
           "properties": {
-            "how": {
-              "$ref": "#/definitions/JoinType"
-            },
-            "left": {
-              "$ref": "#/definitions/Loader"
-            },
-            "left_on": {
-              "type": "string"
-            },
-            "right": {
-              "$ref": "#/definitions/Loader"
-            },
-            "right_on": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "join"
-              ]
+            "join": {
+              "$ref": "#/definitions/JoinSource"
             }
-          }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
           "required": [
-            "path",
-            "type"
+            "config"
           ],
           "properties": {
-            "path": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "enum": [
-                "config"
-              ]
+            "config": {
+              "$ref": "#/definitions/ConfigSource"
             }
-          }
+          },
+          "additionalProperties": false
         }
       ],
       "properties": {
@@ -488,6 +526,18 @@
           "properties": {
             "drop_duplicates": {
               "$ref": "#/definitions/DropDuplicates"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "join"
+          ],
+          "properties": {
+            "join": {
+              "$ref": "#/definitions/Join"
             }
           },
           "additionalProperties": false
