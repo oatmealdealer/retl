@@ -218,33 +218,6 @@
         }
       }
     },
-    "JoinSource": {
-      "type": "object",
-      "required": [
-        "how",
-        "left",
-        "left_on",
-        "right",
-        "right_on"
-      ],
-      "properties": {
-        "how": {
-          "$ref": "#/definitions/JoinType"
-        },
-        "left": {
-          "$ref": "#/definitions/Loader"
-        },
-        "left_on": {
-          "type": "string"
-        },
-        "right": {
-          "$ref": "#/definitions/Loader"
-        },
-        "right_on": {
-          "type": "string"
-        }
-      }
-    },
     "JoinType": {
       "type": "string",
       "enum": [
@@ -265,18 +238,6 @@
           "properties": {
             "csv": {
               "$ref": "#/definitions/CsvSource"
-            }
-          },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "join"
-          ],
-          "properties": {
-            "join": {
-              "$ref": "#/definitions/JoinSource"
             }
           },
           "additionalProperties": false

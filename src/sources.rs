@@ -1,7 +1,7 @@
-use crate::{transforms::TransformItem, types::CanonicalPathBuf, Config, Result};
+use crate::{transforms::TransformItem, Config, Result};
 use polars::{lazy::prelude::*, prelude::*};
 use schemars::JsonSchema;
-use std::{collections::HashMap, fmt::Debug, path::PathBuf};
+use std::{fmt::Debug, path::PathBuf};
 
 pub trait Source: Debug {
     fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame>;
@@ -11,7 +11,6 @@ pub trait Source: Debug {
 #[serde(rename_all = "snake_case")]
 pub enum SourceItem {
     Csv(CsvSource),
-    Join(JoinSource),
     Config(ConfigSource),
 }
 
@@ -19,7 +18,6 @@ impl SourceItem {
     pub fn to_lazy_frame(&self) -> Result<LazyFrame> {
         match self {
             Self::Csv(source) => source.to_lazy_frame(),
-            Self::Join(source) => source.to_lazy_frame(),
             Self::Config(source) => source.to_lazy_frame(),
         }
     }
@@ -93,43 +91,6 @@ impl Source for CsvSource {
             .with_truncate_ragged_lines(true)
             .with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum JoinType {
-    Inner,
-    Left,
-    Right,
-    Full,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct JoinSource {
-    left: Box<Loader>,
-    left_on: String,
-    right: Box<Loader>,
-    right_on: String,
-    how: JoinType,
-}
-
-impl Source for JoinSource {
-    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
-        let lf1 = self.left.load()?;
-        let lf2 = self.right.load()?;
-        Ok(lf1.join(
-            lf2,
-            [col(&self.left_on)],
-            [col(&self.right_on)],
-            JoinArgs::new(match self.how {
-                JoinType::Inner => polars::prelude::JoinType::Inner,
-                JoinType::Left => polars::prelude::JoinType::Left,
-                JoinType::Right => polars::prelude::JoinType::Right,
-                JoinType::Full => polars::prelude::JoinType::Full,
-            })
-            .with_coalesce(JoinCoalesce::CoalesceColumns),
-        ))
     }
 }
 

@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 
-use crate::{expressions::Match, prelude::*, sources::JoinType, ColMap, Result, ToExpr};
+use crate::{expressions::Match, prelude::*, ColMap, Result, ToExpr};
 use std::{collections::BTreeMap, fmt::Debug};
 
 pub trait Transform: Debug {
@@ -58,6 +58,7 @@ pub enum Rename {
     Prefix(String),
 }
 
+// TODO: Fix successive uses of this not stacking properly
 impl Transform for Rename {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         match self {
@@ -183,6 +184,15 @@ impl Transform for DropDuplicates {
     fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
         Ok(lf.unique(self.subset.clone(), UniqueKeepStrategy::from(&self.keep)))
     }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum JoinType {
+    Inner,
+    Left,
+    Right,
+    Full,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
