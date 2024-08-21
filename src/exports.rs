@@ -1,8 +1,8 @@
 use polars::lazy::prelude::*;
 use schemars::JsonSchema;
-use std::fmt::Debug;
+use std::{fmt::Debug, path::PathBuf};
 
-use crate::{types::CanonicalDirectory, Result};
+use crate::Result;
 
 pub trait Export: Debug {
     fn export(&self, lf: LazyFrame) -> anyhow::Result<()>;
@@ -24,14 +24,14 @@ impl ExportItem {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
 pub struct CsvExport {
-    folder: CanonicalDirectory,
+    folder: PathBuf,
     name: String,
 }
 
 impl Export for CsvExport {
     fn export(&self, lf: LazyFrame) -> anyhow::Result<()> {
         std::fs::create_dir_all(&self.folder)?;
-        let mut filename = self.folder.0.clone();
+        let mut filename = self.folder.clone();
         filename.push(format!(
             "{}_{}.csv",
             self.name,
