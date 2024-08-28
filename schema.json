@@ -31,9 +31,6 @@
     "And": {
       "$ref": "#/definitions/ColMap"
     },
-    "CanonicalDirectory": {
-      "type": "string"
-    },
     "ColMap": {
       "type": [
         "object",
@@ -152,7 +149,7 @@
           ],
           "properties": {
             "folder": {
-              "$ref": "#/definitions/CanonicalDirectory"
+              "type": "string"
             },
             "name": {
               "type": "string"
