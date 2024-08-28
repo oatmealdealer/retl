@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.86"
 calamine = "0.25.0"
 chrono = "0.4.38"
-clap = { version = "4.5.13", features = ["derive"] }
+clap = { version = "4.5.16", features = ["derive"] }
 indexmap = "2.4.0"
 polars = { version = "0.42.0", features = [
     "csv",
@@ -29,11 +29,11 @@ polars = { version = "0.42.0", features = [
 ] }
 regex = "1.10.6"
 schemars = "0.8.21"
-serde = "1.0.205"
+serde = "1.0.209"
 serde-tuple-vec-map = "1.0.1"
-serde_json = "1.0.124"
+serde_json = "1.0.127"
 thiserror = "1.0.63"
-tokio = "1.39.2"
+tokio = "1.39.3"
 toml = "0.8.19"
 
 [profile.release]
