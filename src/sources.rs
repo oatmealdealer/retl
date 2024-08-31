@@ -1,30 +1,36 @@
-use crate::{transforms::TransformItem, Config, Result};
-use polars::{lazy::prelude::*, prelude::*};
+use crate::{
+    config::Config,
+    transforms::{Transform, TransformItem},
+};
+use anyhow::Result;
+use polars::lazy::prelude::*;
 use schemars::JsonSchema;
-use std::{fmt::Debug, path::PathBuf};
+use serde::{Deserialize, Serialize};
+use std::{fmt::Debug, path::PathBuf, sync::Arc};
 
-pub trait Source: Debug {
-    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame>;
+pub(crate) trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+    fn load(&self) -> Result<LazyFrame>;
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum SourceItem {
+pub(crate) enum SourceItem {
     Csv(CsvSource),
     Config(ConfigSource),
 }
 
-impl SourceItem {
-    pub fn to_lazy_frame(&self) -> Result<LazyFrame> {
+impl Source for SourceItem {
+    fn load(&self) -> Result<LazyFrame> {
         match self {
-            Self::Csv(source) => source.to_lazy_frame(),
-            Self::Config(source) => source.to_lazy_frame(),
+            Self::Csv(source) => source.load(),
+            Self::Config(source) => source.load(),
         }
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-pub struct Loader {
+/// Load data from a source and apply optional transformations
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub(crate) struct Loader {
     #[serde(flatten)]
     source: SourceItem,
     #[serde(default)]
@@ -32,8 +38,8 @@ pub struct Loader {
 }
 
 impl Loader {
-    pub fn load(&self) -> anyhow::Result<LazyFrame> {
-        let mut lf = self.source.to_lazy_frame()?;
+    pub(crate) fn load(&self) -> Result<LazyFrame> {
+        let mut lf = self.source.load()?;
         for transform in self.transforms.iter() {
             lf = transform.transform(lf)?;
         }
@@ -41,16 +47,10 @@ impl Loader {
     }
 }
 
-impl TryFrom<&Box<dyn Source>> for LazyFrame {
-    type Error = anyhow::Error;
-    fn try_from(value: &Box<dyn Source>) -> std::result::Result<Self, Self::Error> {
-        value.to_lazy_frame()
-    }
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
+/// Any valid ASCII CSV separator
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "char")]
-pub struct Separator(u8);
+pub(crate) struct Separator(u8);
 
 impl TryFrom<char> for Separator {
     type Error = anyhow::Error;
@@ -60,8 +60,11 @@ impl TryFrom<char> for Separator {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Schema(polars::prelude::Schema);
+/// A polars Schema mapping columns to data types -
+/// currently too difficult to provide a schema for, so you're on your own here.
+/// Refer to [`polars::prelude::DataType`] and good luck!
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct Schema(polars::prelude::Schema);
 
 impl JsonSchema for Schema {
     fn schema_name() -> String {
@@ -72,16 +75,21 @@ impl JsonSchema for Schema {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct CsvSource {
+/// Load data from CSV
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct CsvSource {
+    /// Path to load files from, globs permitted
     path: PathBuf,
+    /// Separator to use when parsing
     separator: Option<Separator>,
+    /// Whether or not files have headers
     has_header: Option<bool>,
+    /// Optional [`polars::prelude::Schema`]
     schema: Option<Schema>,
 }
 
 impl Source for CsvSource {
-    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
+    fn load(&self) -> Result<LazyFrame> {
         let mut reader = LazyCsvReader::new(&self.path);
         reader = reader.with_has_header(self.has_header.as_ref().unwrap_or(&true).to_owned());
         if self.separator.is_some() {
@@ -94,13 +102,14 @@ impl Source for CsvSource {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct ConfigSource {
+/// Import another configuration as a data source
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct ConfigSource {
     path: PathBuf,
 }
 
 impl Source for ConfigSource {
-    fn to_lazy_frame(&self) -> anyhow::Result<LazyFrame> {
+    fn load(&self) -> Result<LazyFrame> {
         Config::from_path(&self.path)?.load()
     }
 }

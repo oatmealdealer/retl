@@ -1,16 +1,17 @@
+use crate::{expressions::ToExpr, utils::ColMap};
+use anyhow::Result;
+use polars::lazy::prelude::*;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use schemars::JsonSchema;
-
-use crate::{prelude::*, ColMap, Result, ToExpr};
-
-pub trait Op: Debug {
-    fn expr(&self, expr: Expr) -> Result<Expr>;
+pub(crate) trait Op: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+    fn apply(&self, expr: Expr) -> Result<Expr>;
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum OpItem {
+pub(crate) enum OpItem {
     ExtractGroups(ExtractGroups),
     Alias(Alias),
     Contains(Contains),
@@ -20,50 +21,54 @@ pub enum OpItem {
 }
 
 impl OpItem {
-    pub fn expr(&self, expr: Expr) -> Result<Expr> {
+    pub(crate) fn expr(&self, expr: Expr) -> Result<Expr> {
         match self {
-            Self::ExtractGroups(op) => op.expr(expr),
-            Self::Alias(op) => op.expr(expr),
-            Self::Contains(op) => op.expr(expr),
-            Self::IsNull(op) => op.expr(expr),
-            Self::Or(op) => op.expr(expr),
-            Self::And(op) => op.expr(expr),
+            Self::ExtractGroups(op) => op.apply(expr),
+            Self::Alias(op) => op.apply(expr),
+            Self::Contains(op) => op.apply(expr),
+            Self::IsNull(op) => op.apply(expr),
+            Self::Or(op) => op.apply(expr),
+            Self::And(op) => op.apply(expr),
         }
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct ExtractGroups(String);
+/// Extract all capture groups from a regex into a struct column
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct ExtractGroups(String);
 
 impl Op for ExtractGroups {
-    fn expr(&self, expr: Expr) -> Result<Expr> {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.str().extract_groups(&self.0)?)
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct Alias(String);
+/// Rename a column using the given alias
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct Alias(String);
 
 impl Op for Alias {
-    fn expr(&self, expr: Expr) -> Result<Expr> {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.alias(&self.0))
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct Contains(String);
+/// Check if column contains the given regex
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct Contains(String);
 
 impl Op for Contains {
-    fn expr(&self, expr: Expr) -> Result<Expr> {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.str().contains(lit(self.0.as_str()), true))
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct IsNull(bool);
+/// Check if column is null
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct IsNull(bool);
 
 impl Op for IsNull {
-    fn expr(&self, expr: Expr) -> Result<Expr> {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(if self.0 {
             expr.is_null()
         } else {
@@ -72,36 +77,40 @@ impl Op for IsNull {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct Or(ColMap);
+/// Chain an expression into a logical OR with conditions on one or more columns
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct Or(ColMap);
 
 impl Op for Or {
-    fn expr(&self, expr: Expr) -> Result<Expr> {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(self
             .0
-            .inner
             .iter()
             .try_fold(expr, |chain, (name, ops)| -> Result<Expr> {
                 Ok(chain.or(ops
                     .iter()
-                    .try_fold(name.expr()?, |ex, op| -> Result<Expr> { Ok(op.expr(ex)?) })?))
+                    .try_fold(name.to_expr()?, |ex, op| -> Result<Expr> {
+                        Ok(op.expr(ex)?)
+                    })?))
             })?)
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct And(ColMap);
+/// Chain an expression into a logical AND with conditions on one or more columns
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct And(ColMap);
 
 impl Op for And {
-    fn expr(&self, expr: Expr) -> Result<Expr> {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(self
             .0
-            .inner
             .iter()
             .try_fold(expr, |chain, (name, ops)| -> Result<Expr> {
                 Ok(chain.and(
                     ops.iter()
-                        .try_fold(name.expr()?, |ex, op| -> Result<Expr> { Ok(op.expr(ex)?) })?,
+                        .try_fold(name.to_expr()?, |ex, op| -> Result<Expr> {
+                            Ok(op.expr(ex)?)
+                        })?,
                 ))
             })?)
     }

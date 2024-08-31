@@ -1,12 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Config",
+  "description": "Configuration to load data, apply transformations, and export to one or multiple destinations",
   "type": "object",
   "required": [
     "source"
   ],
   "properties": {
     "exports": {
+      "description": "Export destinations for the transformed data",
       "default": [],
       "type": "array",
       "items": {
@@ -14,9 +16,15 @@
       }
     },
     "source": {
-      "$ref": "#/definitions/Loader"
+      "description": "The top-level source that data should be loaded from",
+      "allOf": [
+        {
+          "$ref": "#/definitions/Loader"
+        }
+      ]
     },
     "transforms": {
+      "description": "Transformations to apply to the data loaded from the source",
       "default": [],
       "type": "array",
       "items": {
@@ -26,10 +34,16 @@
   },
   "definitions": {
     "Alias": {
+      "description": "Rename a column using the given alias",
       "type": "string"
     },
     "And": {
-      "$ref": "#/definitions/ColMap"
+      "description": "Chain an expression into a logical AND with conditions on one or more columns",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ColMap"
+        }
+      ]
     },
     "ColMap": {
       "type": [
@@ -54,9 +68,11 @@
       }
     },
     "Column": {
+      "description": "Specify a column by name (equivalent to [`polars::prelude::col`])",
       "type": "string"
     },
     "ConfigSource": {
+      "description": "Import another configuration as a data source",
       "type": "object",
       "required": [
         "path"
@@ -68,24 +84,29 @@
       }
     },
     "Contains": {
+      "description": "Check if column contains the given regex",
       "type": "string"
     },
     "CsvSource": {
+      "description": "Load data from CSV",
       "type": "object",
       "required": [
         "path"
       ],
       "properties": {
         "has_header": {
+          "description": "Whether or not files have headers",
           "type": [
             "boolean",
             "null"
           ]
         },
         "path": {
+          "description": "Path to load files from, globs permitted",
           "type": "string"
         },
         "schema": {
+          "description": "Optional [`polars::prelude::Schema`]",
           "anyOf": [
             {
               "$ref": "#/definitions/Schema"
@@ -96,6 +117,7 @@
           ]
         },
         "separator": {
+          "description": "Separator to use when parsing",
           "anyOf": [
             {
               "$ref": "#/definitions/Separator"
@@ -108,6 +130,7 @@
       }
     },
     "DropDuplicates": {
+      "description": "Filter out duplicate rows",
       "type": "object",
       "properties": {
         "keep": {
@@ -119,6 +142,7 @@
           ]
         },
         "subset": {
+          "description": "Columns to check for duplicate values (defaults to all columns)",
           "type": [
             "array",
             "null"
@@ -130,6 +154,7 @@
       }
     },
     "DuplicateKeep": {
+      "description": "Which duplicate rows to keep to keep when dropping duplicates from data",
       "type": "string",
       "enum": [
         "first",
@@ -141,6 +166,7 @@
     "ExportItem": {
       "oneOf": [
         {
+          "description": "Export data to CSV",
           "type": "object",
           "required": [
             "folder",
@@ -148,10 +174,19 @@
             "type"
           ],
           "properties": {
+            "date_format": {
+              "description": "Optional format string to append the current time to the filename - refer to https://docs.rs/chrono/latest/chrono/format/strftime/index.html for available format codes",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "folder": {
+              "description": "Folder in which to create files",
               "type": "string"
             },
             "name": {
+              "description": "Name of the output file (not including the file extension)",
               "type": "string"
             },
             "type": {
@@ -165,6 +200,7 @@
       ]
     },
     "Extract": {
+      "description": "Extract capture groups from a regex into separate columns",
       "type": "object",
       "required": [
         "column",
@@ -184,15 +220,23 @@
       }
     },
     "ExtractGroups": {
+      "description": "Extract all capture groups from a regex into a struct column",
       "type": "string"
     },
     "Filter": {
-      "$ref": "#/definitions/ColMap"
+      "description": "Filter rows using a mapping of columns to operations to apply, which must yield boolean values",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ColMap"
+        }
+      ]
     },
     "IsNull": {
+      "description": "Check if column is null",
       "type": "boolean"
     },
     "Join": {
+      "description": "Transform data by joining it with data from another source",
       "type": "object",
       "required": [
         "how",
@@ -225,6 +269,7 @@
       ]
     },
     "Loader": {
+      "description": "Load data from a source and apply optional transformations",
       "type": "object",
       "oneOf": [
         {
@@ -339,11 +384,18 @@
       ]
     },
     "Or": {
-      "$ref": "#/definitions/ColMap"
+      "description": "Chain an expression into a logical OR with conditions on one or more columns",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ColMap"
+        }
+      ]
     },
     "Rename": {
+      "description": "Rename columns",
       "oneOf": [
         {
+          "description": "Rename using a direct mapping of old names to new",
           "type": "object",
           "required": [
             "map"
@@ -357,31 +409,26 @@
             }
           },
           "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": [
-            "prefix"
-          ],
-          "properties": {
-            "prefix": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
         }
       ]
     },
     "Schema": true,
     "Select": {
-      "$ref": "#/definitions/ColMap"
+      "description": "Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`]",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ColMap"
+        }
+      ]
     },
     "Separator": {
+      "description": "Any valid ASCII CSV separator",
       "type": "integer",
       "format": "uint8",
       "minimum": 0.0
     },
     "Sort": {
+      "description": "Sort a column ascending or descending",
       "type": "object",
       "required": [
         "column"
@@ -397,6 +444,7 @@
       }
     },
     "SortBy": {
+      "description": "Sort the data by one or more columns",
       "type": "array",
       "items": {
         "$ref": "#/definitions/Sort"
@@ -503,6 +551,7 @@
       ]
     },
     "Unnest": {
+      "description": "Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns",
       "type": "array",
       "items": {
         "type": "string"

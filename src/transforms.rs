@@ -1,15 +1,23 @@
+use crate::{
+    expressions::{Match, ToExpr},
+    sources::Loader,
+    utils::ColMap,
+};
+use anyhow::Result;
+use polars::{lazy::prelude::*, prelude::*};
 use schemars::JsonSchema;
-
-use crate::{expressions::Match, prelude::*, ColMap, Result, ToExpr};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Debug};
 
-pub trait Transform: Debug {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame>;
+pub(crate) trait Transform:
+    Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug
+{
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame>;
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum TransformItem {
+pub(crate) enum TransformItem {
     Select(Select),
     Rename(Rename),
     Filter(Filter),
@@ -20,8 +28,8 @@ pub enum TransformItem {
     Join(Join),
 }
 
-impl TransformItem {
-    pub fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+impl Transform for TransformItem {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         match self {
             Self::Select(transform) => transform.transform(lf),
             Self::Rename(transform) => transform.transform(lf),
@@ -35,63 +43,65 @@ impl TransformItem {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-pub struct Select(ColMap);
+/// Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`]
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct Select(ColMap);
 
 impl Transform for Select {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.select(
             self.0
-                .inner
                 .iter()
-                .map(|(k, v)| v.iter().try_fold(k.expr()?, |expr, op| op.expr(expr)))
+                .map(|(k, v)| v.iter().try_fold(k.to_expr()?, |expr, op| op.expr(expr)))
                 .collect::<Result<Vec<Expr>, _>>()?
                 .as_slice(),
         ))
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+/// Rename columns
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum Rename {
+pub(crate) enum Rename {
+    /// Rename using a direct mapping of old names to new
     Map(BTreeMap<String, String>),
-    Prefix(String),
+    // /// Rename all columns using a prefix
+    // Prefix(String),
 }
 
-// TODO: Fix successive uses of this not stacking properly
 impl Transform for Rename {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         match self {
             Self::Map(columns) => Ok(lf.rename(columns.keys(), columns.values())),
-            Self::Prefix(_prefix) => {
-                let prefix = _prefix.clone();
-                Ok(lf.select([all()
-                    .name()
-                    .map(move |col| Ok(format!("{}{}", prefix, col)))]))
-            }
+            // TODO: Fix successive uses of this not stacking properly
+            // Self::Prefix(_prefix) => {
+            //     let prefix = _prefix.clone();
+            //     Ok(lf.select([all()
+            //         .name()
+            //         .map(move |col| Ok(format!("{}{}", prefix, col)))]))
+            // }
         }
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-struct Filter(ColMap);
+/// Filter rows using a mapping of columns to operations to apply, which must yield boolean values
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct Filter(ColMap);
 
 impl Transform for Filter {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(self
             .0
-            .inner
             .iter()
-            .try_fold(lf, |lf, (k, v)| -> anyhow::Result<LazyFrame> {
-                anyhow::Result::Ok(
-                    lf.filter(v.iter().try_fold(k.expr()?, |expr, op| op.expr(expr))?),
-                )
+            .try_fold(lf, |lf, (k, v)| -> Result<LazyFrame> {
+                Ok(lf.filter(v.iter().try_fold(k.to_expr()?, |expr, op| op.expr(expr))?))
             })?)
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
-struct Extract {
+/// Extract capture groups from a regex into separate columns
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub(crate) struct Extract {
     #[serde(flatten)]
     matcher: Match,
     #[serde(default)]
@@ -99,9 +109,9 @@ struct Extract {
 }
 
 impl Transform for Extract {
-    fn transform(&self, mut lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, mut lf: LazyFrame) -> Result<LazyFrame> {
         if self.filter {
-            lf = lf.filter(self.matcher.expr()?);
+            lf = lf.filter(self.matcher.to_expr()?);
         }
 
         // TODO: See if this can be done without an intermediate alias
@@ -120,27 +130,30 @@ impl Transform for Extract {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-struct Unnest(Vec<String>);
+/// Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub(crate) struct Unnest(Vec<String>);
 
 impl Transform for Unnest {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.unnest(&self.0))
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-pub struct Sort {
+/// Sort a column ascending or descending
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub(crate) struct Sort {
     column: String,
     #[serde(default)]
     descending: bool,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-pub struct SortBy(Vec<Sort>);
+/// Sort the data by one or more columns
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub(crate) struct SortBy(Vec<Sort>);
 
 impl Transform for SortBy {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.sort_by_exprs(
             self.0
                 .iter()
@@ -152,9 +165,10 @@ impl Transform for SortBy {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, Default, JsonSchema)]
+/// Which duplicate rows to keep to keep when dropping duplicates from data
+#[derive(Deserialize, Serialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum DuplicateKeep {
+pub(crate) enum DuplicateKeep {
     First,
     Last,
     #[default]
@@ -173,30 +187,33 @@ impl From<&DuplicateKeep> for UniqueKeepStrategy {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-pub struct DropDuplicates {
+/// Filter out duplicate rows
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub(crate) struct DropDuplicates {
+    /// Columns to check for duplicate values (defaults to all columns)
     subset: Option<Vec<String>>,
     #[serde(default)]
     keep: DuplicateKeep,
 }
 
 impl Transform for DropDuplicates {
-    fn transform(&self, lf: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.unique(self.subset.clone(), UniqueKeepStrategy::from(&self.keep)))
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum JoinType {
+pub(crate) enum JoinType {
     Inner,
     Left,
     Right,
     Full,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, JsonSchema)]
-pub struct Join {
+/// Transform data by joining it with data from another source
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub(crate) struct Join {
     right: Box<Loader>,
     left_on: String,
     right_on: String,
@@ -204,7 +221,7 @@ pub struct Join {
 }
 
 impl Transform for Join {
-    fn transform(&self, lf1: LazyFrame) -> anyhow::Result<LazyFrame> {
+    fn transform(&self, lf1: LazyFrame) -> Result<LazyFrame> {
         let lf2 = self.right.load()?;
         Ok(lf1.join(
             lf2,
