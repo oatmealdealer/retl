@@ -24,7 +24,7 @@ fn main() -> Result<()> {
         Cli::Run(args) => Config::from_path(&args.config)?.run(),
         Cli::DumpSchema { path } => {
             let schema = schema_for!(Config);
-            let writer = std::fs::File::create(path.canonicalize()?)?;
+            let writer = std::fs::File::create(path)?;
             Ok(serde_json::to_writer_pretty(writer, &schema)?)
         }
     }
