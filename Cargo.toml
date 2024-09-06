@@ -38,3 +38,6 @@ toml = "0.8.19"
 [profile.release]
 opt-level = 2
 lto = true
+
+[lints.rust]
+missing_docs = "warn"

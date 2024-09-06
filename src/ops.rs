@@ -33,7 +33,7 @@ impl OpItem {
     }
 }
 
-/// Extract all capture groups from a regex into a struct column
+/// Extract all capture groups from a regex into a struct column.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct ExtractGroups(String);
 
@@ -43,7 +43,7 @@ impl Op for ExtractGroups {
     }
 }
 
-/// Rename a column using the given alias
+/// Name a column using the given alias.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Alias(String);
 
@@ -53,7 +53,7 @@ impl Op for Alias {
     }
 }
 
-/// Check if column contains the given regex
+/// Check if values contain the given regex.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Contains(String);
 
@@ -63,7 +63,7 @@ impl Op for Contains {
     }
 }
 
-/// Check if column is null
+/// Check if values are null.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct IsNull(bool);
 
@@ -77,7 +77,7 @@ impl Op for IsNull {
     }
 }
 
-/// Chain an expression into a logical OR with conditions on one or more columns
+/// Chain an expression into a logical OR with conditions on one or more columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Or(ColMap);
 
@@ -96,7 +96,7 @@ impl Op for Or {
     }
 }
 
-/// Chain an expression into a logical AND with conditions on one or more columns
+/// Chain an expression into a logical AND with conditions on one or more columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct And(ColMap);
 

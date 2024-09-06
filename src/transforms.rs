@@ -43,7 +43,7 @@ impl Transform for TransformItem {
     }
 }
 
-/// Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`]
+/// Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Select(ColMap);
 
@@ -59,13 +59,13 @@ impl Transform for Select {
     }
 }
 
-/// Rename columns
+/// Rename columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum Rename {
-    /// Rename using a direct mapping of old names to new
+    /// Rename using a direct mapping of old names to new.
     Map(BTreeMap<String, String>),
-    // /// Rename all columns using a prefix
+    // /// Rename all columns using a prefix.
     // Prefix(String),
 }
 
@@ -84,7 +84,7 @@ impl Transform for Rename {
     }
 }
 
-/// Filter rows using a mapping of columns to operations to apply, which must yield boolean values
+/// Filter rows using a mapping of columns to operations to apply, which must yield boolean values.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Filter(ColMap);
 
@@ -99,7 +99,7 @@ impl Transform for Filter {
     }
 }
 
-/// Extract capture groups from a regex into separate columns
+/// Extract capture groups from a regex into separate columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Extract {
     #[serde(flatten)]
@@ -130,7 +130,7 @@ impl Transform for Extract {
     }
 }
 
-/// Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns
+/// Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 pub(crate) struct Unnest(Vec<String>);
 
@@ -140,7 +140,7 @@ impl Transform for Unnest {
     }
 }
 
-/// Sort a column ascending or descending
+/// Sort a column ascending or descending.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 pub(crate) struct Sort {
     column: String,
@@ -148,7 +148,7 @@ pub(crate) struct Sort {
     descending: bool,
 }
 
-/// Sort the data by one or more columns
+/// Sort the data by one or more columns.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 pub(crate) struct SortBy(Vec<Sort>);
 
@@ -165,7 +165,7 @@ impl Transform for SortBy {
     }
 }
 
-/// Which duplicate rows to keep to keep when dropping duplicates from data
+/// Which duplicate rows to keep to keep when dropping duplicates from data.
 #[derive(Deserialize, Serialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum DuplicateKeep {
@@ -187,11 +187,12 @@ impl From<&DuplicateKeep> for UniqueKeepStrategy {
     }
 }
 
-/// Filter out duplicate rows
+/// Filter out duplicate rows.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 pub(crate) struct DropDuplicates {
-    /// Columns to check for duplicate values (defaults to all columns)
+    /// Columns to check for duplicate values (defaults to all columns).
     subset: Option<Vec<String>>,
+    /// Which duplicate record (if any) to keep.
     #[serde(default)]
     keep: DuplicateKeep,
 }
@@ -211,12 +212,16 @@ pub(crate) enum JoinType {
     Full,
 }
 
-/// Transform data by joining it with data from another source
+/// Transform data by joining it with data from another source.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 pub(crate) struct Join {
+    /// The right-hand dataset to join the input with.
     right: Box<Loader>,
+    /// The column in the left-hand dataset to join on.
     left_on: String,
+    /// The column in the right-hand dataset to join on.
     right_on: String,
+    /// Join method to use.
     how: JoinType,
 }
 

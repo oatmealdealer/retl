@@ -22,15 +22,15 @@ impl ExportItem {
     }
 }
 
-/// Export data to CSV
+/// Export data to CSV.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct CsvExport {
-    /// Folder in which to create files
+    /// Folder in which to create files.
     folder: PathBuf,
-    /// Name of the output file (not including the file extension)
+    /// Name of the output file, not including the file extension.
     name: String,
     /// Optional format string to append the current time to the filename -
-    /// refer to https://docs.rs/chrono/latest/chrono/format/strftime/index.html for available format codes
+    /// refer to https://docs.rs/chrono/latest/chrono/format/strftime/index.html for available format codes.
     date_format: Option<String>,
 }
 

@@ -28,7 +28,7 @@ impl Source for SourceItem {
     }
 }
 
-/// Load data from a source and apply optional transformations
+/// Load data from a given source and apply optional transformations.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 pub(crate) struct Loader {
     #[serde(flatten)]
@@ -47,7 +47,7 @@ impl Loader {
     }
 }
 
-/// Any valid ASCII CSV separator
+/// A valid ASCII CSV separator, represented internally as a [`u8`].
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "char")]
 pub(crate) struct Separator(u8);
@@ -75,16 +75,16 @@ impl JsonSchema for Schema {
     }
 }
 
-/// Load data from CSV
+/// Load data from CSV.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct CsvSource {
-    /// Path to load files from, globs permitted
+    /// Path to load files from, globs permitted.
     path: PathBuf,
-    /// Separator to use when parsing
+    /// Separator to use when parsing.
     separator: Option<Separator>,
-    /// Whether or not files have headers
+    /// Whether or not files have headers.
     has_header: Option<bool>,
-    /// Optional [`polars::prelude::Schema`]
+    /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
     schema: Option<Schema>,
 }
 
@@ -102,7 +102,7 @@ impl Source for CsvSource {
     }
 }
 
-/// Import another configuration as a data source
+/// Import another configuration file to be used as a data source.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct ConfigSource {
     path: PathBuf,

@@ -29,7 +29,7 @@ impl ToExprItem {
     }
 }
 
-/// Specify a column by name (equivalent to [`polars::prelude::col`])
+/// Specify a column by name (equivalent to [`polars::prelude::col`]).
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
 pub(crate) struct Column(String);
 
@@ -39,7 +39,7 @@ impl ToExpr for Column {
     }
 }
 
-/// Match a column against a regex
+/// Match a column against a regex.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub(crate) struct Match {
     pub(crate) column: String,
@@ -56,7 +56,7 @@ impl ToExpr for Match {
 
 type Conditions = Vec<ToExprItem>;
 
-/// Logical AND against two or more conditions
+/// Logical AND against two or more conditions.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
 pub(crate) struct And {
@@ -90,7 +90,7 @@ impl ToExpr for And {
     }
 }
 
-/// Logical OR against two or more conditions
+/// Logical OR against two or more conditions.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
 pub(crate) struct Or {
