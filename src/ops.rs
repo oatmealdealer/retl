@@ -1,22 +1,32 @@
-use crate::{expressions::ToExpr, utils::ColMap};
+//! Operations that can be used to modify/compose [`Expr`]s.
+use crate::{expressions::Expression, utils::ColMap};
 use anyhow::Result;
 use polars::lazy::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-pub(crate) trait Op: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+/// Trait for an operation that modifies an expression supplied as input.
+pub trait Op: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+    /// Modify the given expression based on the provided data.
     fn apply(&self, expr: Expr) -> Result<Expr>;
 }
 
+/// Possible operations that can be applied to an expression (i.e. [`polars::prelude::Expr`]).
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum OpItem {
+pub enum OpItem {
+    /// Extract the capture groups of a regex from the given column.
     ExtractGroups(ExtractGroups),
+    /// Name a column using the given alias.
     Alias(Alias),
+    /// Check if values contain the given regex.
     Contains(Contains),
+    /// Check if values are null.
     IsNull(IsNull),
+    /// Chain an expression into a logical OR with conditions on one or more columns.
     Or(Or),
+    /// Chain an expression into a logical AND with conditions on one or more columns.
     And(And),
 }
 
@@ -33,9 +43,9 @@ impl OpItem {
     }
 }
 
-/// Extract all capture groups from a regex into a struct column.
+/// Extract the capture groups of a regex from the given column.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct ExtractGroups(String);
+pub struct ExtractGroups(String);
 
 impl Op for ExtractGroups {
     fn apply(&self, expr: Expr) -> Result<Expr> {
@@ -45,7 +55,7 @@ impl Op for ExtractGroups {
 
 /// Name a column using the given alias.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Alias(String);
+pub struct Alias(String);
 
 impl Op for Alias {
     fn apply(&self, expr: Expr) -> Result<Expr> {
@@ -55,7 +65,7 @@ impl Op for Alias {
 
 /// Check if values contain the given regex.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Contains(String);
+pub struct Contains(String);
 
 impl Op for Contains {
     fn apply(&self, expr: Expr) -> Result<Expr> {
@@ -65,7 +75,7 @@ impl Op for Contains {
 
 /// Check if values are null.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct IsNull(bool);
+pub struct IsNull(bool);
 
 impl Op for IsNull {
     fn apply(&self, expr: Expr) -> Result<Expr> {
@@ -79,7 +89,7 @@ impl Op for IsNull {
 
 /// Chain an expression into a logical OR with conditions on one or more columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Or(ColMap);
+pub struct Or(ColMap);
 
 impl Op for Or {
     fn apply(&self, expr: Expr) -> Result<Expr> {
@@ -98,7 +108,7 @@ impl Op for Or {
 
 /// Chain an expression into a logical AND with conditions on one or more columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct And(ColMap);
+pub struct And(ColMap);
 
 impl Op for And {
     fn apply(&self, expr: Expr) -> Result<Expr> {

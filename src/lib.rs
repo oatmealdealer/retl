@@ -1,10 +1,12 @@
+#![doc = include_str!("../README.md")]
+
 extern crate tuple_vec_map;
 mod config;
-mod exports;
-mod expressions;
-mod ops;
-mod sources;
-mod transforms;
+pub mod exports;
+pub mod expressions;
+pub mod ops;
+pub mod sources;
+pub mod transforms;
 pub(crate) mod utils;
 
 pub use config::Config;

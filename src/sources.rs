@@ -1,3 +1,5 @@
+//! Sources from which data can be loaded and passed to transformations.
+
 use crate::{
     config::Config,
     transforms::{Transform, TransformItem},
@@ -8,14 +10,19 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, path::PathBuf, sync::Arc};
 
-pub(crate) trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+/// Trait for a source of data that can be loaded into a [`LazyFrame`].
+pub trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+    /// Load the [`LazyFrame`] based on the provided data.
     fn load(&self) -> Result<LazyFrame>;
 }
 
+/// Available sources that can be used in configuration files.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum SourceItem {
+pub enum SourceItem {
+    /// Load data from CSV.
     Csv(CsvSource),
+    /// Load data from another `retl` configuration file.
     Config(ConfigSource),
 }
 
@@ -30,11 +37,13 @@ impl Source for SourceItem {
 
 /// Load data from a given source and apply optional transformations.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
-pub(crate) struct Loader {
+pub struct Loader {
+    /// The source to load data from.
     #[serde(flatten)]
-    source: SourceItem,
+    pub source: SourceItem,
+    /// Which transformations, if any, to apply to the data before returning it.
     #[serde(default)]
-    transforms: Vec<TransformItem>,
+    pub transforms: Vec<TransformItem>,
 }
 
 impl Loader {
@@ -50,7 +59,7 @@ impl Loader {
 /// A valid ASCII CSV separator, represented internally as a [`u8`].
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "char")]
-pub(crate) struct Separator(u8);
+pub struct Separator(u8);
 
 impl TryFrom<char> for Separator {
     type Error = anyhow::Error;
@@ -64,7 +73,7 @@ impl TryFrom<char> for Separator {
 /// currently too difficult to provide a schema for, so you're on your own here.
 /// Refer to [`polars::prelude::DataType`] and good luck!
 #[derive(Serialize, Deserialize, Debug)]
-pub(crate) struct Schema(polars::prelude::Schema);
+pub struct Schema(polars::prelude::Schema);
 
 impl JsonSchema for Schema {
     fn schema_name() -> String {
@@ -77,15 +86,17 @@ impl JsonSchema for Schema {
 
 /// Load data from CSV.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct CsvSource {
-    /// Path to load files from, globs permitted.
-    path: PathBuf,
+pub struct CsvSource {
+    /// The path to load files from.
+    /// This path is passed directly to [`LazyCsvReader`], so paths with globs are permissible
+    /// (e.g. `./files/*.csv`).
+    pub path: PathBuf,
     /// Separator to use when parsing.
-    separator: Option<Separator>,
+    pub separator: Option<Separator>,
     /// Whether or not files have headers.
-    has_header: Option<bool>,
+    pub has_header: Option<bool>,
     /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
-    schema: Option<Schema>,
+    pub schema: Option<Schema>,
 }
 
 impl Source for CsvSource {
@@ -104,8 +115,9 @@ impl Source for CsvSource {
 
 /// Import another configuration file to be used as a data source.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct ConfigSource {
-    path: PathBuf,
+pub struct ConfigSource {
+    /// Path to the configuration file.
+    pub path: PathBuf,
 }
 
 impl Source for ConfigSource {

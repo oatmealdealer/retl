@@ -1,3 +1,6 @@
+//! CLI to run commands relating to `retl` configuration files.
+//! The `dump-schema` subcommand can be used to dump a JSON schema to disk using [`schemars`].
+
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -11,12 +14,14 @@ enum Cli {
     Run(RunArgs),
     /// Dump the configuration JSON schema to the given path.
     DumpSchema {
+        /// Path to dump the JSON schema to.
         path: PathBuf
     },
 }
 
 #[derive(Parser)]
 struct RunArgs {
+    /// Path to the configuration file to run.
     config: PathBuf,
 }
 fn main() -> Result<()> {

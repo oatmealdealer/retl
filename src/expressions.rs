@@ -1,3 +1,4 @@
+//! Expressions that evaluate to an [`Expr`]
 use crate::utils::Error;
 use anyhow::{Context, Result};
 use polars::lazy::prelude::*;
@@ -5,20 +6,27 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-pub(crate) trait ToExpr: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+/// Trait for a data structure that evaluates to a [`Expr`].
+pub trait Expression: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+    /// Produce the expression based on the provided data.
     fn to_expr(&self) -> Result<Expr>;
 }
 
+/// Available expressions that can be used in configuration files.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ToExprItem {
+pub enum ExpressionItem {
+    /// Specify a column by name (equivalent to [`col`]).
     Column(Column),
+    /// Match a regex against a column (equivalent to `col(...).str().contains(...)`).
     Match(Match),
+    /// Group 2+ items together in a logical AND statement.
     And(And),
+    /// Group 2+ items together in a logical OR statement.
     Or(Or),
 }
 
-impl ToExprItem {
+impl ExpressionItem {
     pub(crate) fn expr(&self) -> Result<Expr> {
         match self {
             Self::Column(expr) => expr.to_expr(),
@@ -31,9 +39,9 @@ impl ToExprItem {
 
 /// Specify a column by name (equivalent to [`polars::prelude::col`]).
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
-pub(crate) struct Column(String);
+pub struct Column(String);
 
-impl ToExpr for Column {
+impl Expression for Column {
     fn to_expr(&self) -> Result<Expr> {
         Ok(col(self.0.as_str()))
     }
@@ -41,12 +49,14 @@ impl ToExpr for Column {
 
 /// Match a column against a regex.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Match {
-    pub(crate) column: String,
-    pub(crate) pattern: String,
+pub struct Match {
+    /// Column to apply pattern to.
+    pub column: String,
+    /// Pattern to match against the column.
+    pub pattern: String,
 }
 
-impl ToExpr for Match {
+impl Expression for Match {
     fn to_expr(&self) -> Result<Expr> {
         Ok(col(&self.column)
             .str()
@@ -54,13 +64,14 @@ impl ToExpr for Match {
     }
 }
 
-type Conditions = Vec<ToExprItem>;
+type Conditions = Vec<ExpressionItem>;
 
 /// Logical AND against two or more conditions.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
-pub(crate) struct And {
-    conditions: Conditions,
+pub struct And {
+    /// Conditions to combine.
+    pub conditions: Conditions,
 }
 
 impl TryFrom<Conditions> for And {
@@ -77,7 +88,7 @@ impl TryFrom<Conditions> for And {
     }
 }
 
-impl ToExpr for And {
+impl Expression for And {
     fn to_expr(&self) -> Result<Expr> {
         let mut expr: Option<Expr> = None;
         for cond in self.conditions.iter() {
@@ -93,8 +104,9 @@ impl ToExpr for And {
 /// Logical OR against two or more conditions.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
-pub(crate) struct Or {
-    conditions: Conditions,
+pub struct Or {
+    /// Conditions to combine.
+    pub conditions: Conditions,
 }
 
 impl TryFrom<Conditions> for Or {
@@ -111,7 +123,7 @@ impl TryFrom<Conditions> for Or {
     }
 }
 
-impl ToExpr for Or {
+impl Expression for Or {
     fn to_expr(&self) -> Result<Expr> {
         let mut expr: Option<Expr> = None;
         for cond in self.conditions.iter() {

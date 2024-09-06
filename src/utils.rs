@@ -23,7 +23,7 @@ impl Deref for ColMap {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum Error {
+pub enum Error {
     #[error("must define at least one export")]
     NoExports,
     #[error("{0}")]

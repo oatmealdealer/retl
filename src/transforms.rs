@@ -1,5 +1,7 @@
+//! Transformations that modify a [`LazyFrame`] and pass it on to other transformations, or to be exported.
+
 use crate::{
-    expressions::{Match, ToExpr},
+    expressions::{Expression, Match},
     sources::Loader,
     utils::ColMap,
 };
@@ -9,22 +11,31 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Debug};
 
-pub(crate) trait Transform:
-    Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug
-{
+/// Trait for transformations that take a [`LazyFrame`] as input and modify it.
+pub trait Transform: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
+    /// Transform a [`LazyFrame`] according to the provided data.
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame>;
 }
 
+/// Available transformations that can be used in configuration files.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum TransformItem {
+pub enum TransformItem {
+    /// Select columns (equivalent to [`LazyFrame::select`])
     Select(Select),
+    /// Rename columns (equivalent to [`LazyFrame::rename`])
     Rename(Rename),
+    /// Filter columns (equivalent to [`LazyFrame::filter`])
     Filter(Filter),
+    /// Extract capture groups of a regex into separate columns.
     Extract(Extract),
+    /// Apply [`LazyFrame::unnest`] to the given struct columns.
     Unnest(Unnest),
+    /// Sort the data by one or more columns.
     SortBy(SortBy),
+    /// Drop duplicate rows from the dataset.
     DropDuplicates(DropDuplicates),
+    /// Join the dataset with another dataset.
     Join(Join),
 }
 
@@ -45,7 +56,7 @@ impl Transform for TransformItem {
 
 /// Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Select(ColMap);
+pub struct Select(ColMap);
 
 impl Transform for Select {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
@@ -62,7 +73,7 @@ impl Transform for Select {
 /// Rename columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum Rename {
+pub enum Rename {
     /// Rename using a direct mapping of old names to new.
     Map(BTreeMap<String, String>),
     // /// Rename all columns using a prefix.
@@ -86,7 +97,7 @@ impl Transform for Rename {
 
 /// Filter rows using a mapping of columns to operations to apply, which must yield boolean values.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Filter(ColMap);
+pub struct Filter(ColMap);
 
 impl Transform for Filter {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
@@ -101,7 +112,7 @@ impl Transform for Filter {
 
 /// Extract capture groups from a regex into separate columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct Extract {
+pub struct Extract {
     #[serde(flatten)]
     matcher: Match,
     #[serde(default)]
@@ -132,7 +143,7 @@ impl Transform for Extract {
 
 /// Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
-pub(crate) struct Unnest(Vec<String>);
+pub struct Unnest(Vec<String>);
 
 impl Transform for Unnest {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
@@ -142,7 +153,7 @@ impl Transform for Unnest {
 
 /// Sort a column ascending or descending.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
-pub(crate) struct Sort {
+pub struct Sort {
     column: String,
     #[serde(default)]
     descending: bool,
@@ -150,7 +161,7 @@ pub(crate) struct Sort {
 
 /// Sort the data by one or more columns.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
-pub(crate) struct SortBy(Vec<Sort>);
+pub struct SortBy(Vec<Sort>);
 
 impl Transform for SortBy {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
@@ -168,11 +179,15 @@ impl Transform for SortBy {
 /// Which duplicate rows to keep to keep when dropping duplicates from data.
 #[derive(Deserialize, Serialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum DuplicateKeep {
+pub enum DuplicateKeep {
+    /// Keep the first duplicate record.
     First,
+    /// Keep the last duplicate record.
     Last,
+    /// Keep any duplicate row. This allows for more optimization but makes no guarantees about which row will be kept.
     #[default]
     Any,
+    /// Do not keep any duplicate rows.
     None,
 }
 
@@ -189,12 +204,12 @@ impl From<&DuplicateKeep> for UniqueKeepStrategy {
 
 /// Filter out duplicate rows.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
-pub(crate) struct DropDuplicates {
+pub struct DropDuplicates {
     /// Columns to check for duplicate values (defaults to all columns).
-    subset: Option<Vec<String>>,
+    pub subset: Option<Vec<String>>,
     /// Which duplicate record (if any) to keep.
     #[serde(default)]
-    keep: DuplicateKeep,
+    pub keep: DuplicateKeep,
 }
 
 impl Transform for DropDuplicates {
@@ -203,26 +218,31 @@ impl Transform for DropDuplicates {
     }
 }
 
+/// The method by which to join datasets. Maps to [`polars::prelude::JoinType`].
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum JoinType {
+pub enum JoinType {
+    /// Inner join - keep only rows that match on both sides.
     Inner,
+    /// Left join - keep all rows from the left dataset.
     Left,
+    /// Right join - keep all rows from the right dataset.
     Right,
+    /// Full join - keep all rows from both datasets.
     Full,
 }
 
 /// Transform data by joining it with data from another source.
 #[derive(Deserialize, Serialize, Debug, JsonSchema)]
-pub(crate) struct Join {
+pub struct Join {
     /// The right-hand dataset to join the input with.
-    right: Box<Loader>,
+    pub right: Box<Loader>,
     /// The column in the left-hand dataset to join on.
-    left_on: String,
+    pub left_on: String,
     /// The column in the right-hand dataset to join on.
-    right_on: String,
+    pub right_on: String,
     /// Join method to use.
-    how: JoinType,
+    pub how: JoinType,
 }
 
 impl Transform for Join {

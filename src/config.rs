@@ -14,13 +14,13 @@ use std::{fmt::Debug, path::Path};
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Config {
     /// The top-level source that data should be loaded from.
-    source: Loader,
+    pub source: Loader,
     /// Transformations to apply to the data loaded from the source.
     #[serde(default)]
-    transforms: Vec<TransformItem>,
+    pub transforms: Vec<TransformItem>,
     /// Export destinations for the transformed data.
     #[serde(default)]
-    exports: Vec<ExportItem>,
+    pub exports: Vec<ExportItem>,
 }
 
 impl Config {

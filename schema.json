@@ -79,6 +79,7 @@
       ],
       "properties": {
         "path": {
+          "description": "Path to the configuration file.",
           "type": "string"
         }
       }
@@ -102,7 +103,7 @@
           ]
         },
         "path": {
-          "description": "Path to load files from, globs permitted.",
+          "description": "The path to load files from. This path is passed directly to [`LazyCsvReader`], so paths with globs are permissible (e.g. `./files/*.csv`).",
           "type": "string"
         },
         "schema": {
@@ -156,15 +157,39 @@
     },
     "DuplicateKeep": {
       "description": "Which duplicate rows to keep to keep when dropping duplicates from data.",
-      "type": "string",
-      "enum": [
-        "first",
-        "last",
-        "any",
-        "none"
+      "oneOf": [
+        {
+          "description": "Keep the first duplicate record.",
+          "type": "string",
+          "enum": [
+            "first"
+          ]
+        },
+        {
+          "description": "Keep the last duplicate record.",
+          "type": "string",
+          "enum": [
+            "last"
+          ]
+        },
+        {
+          "description": "Keep any duplicate row. This allows for more optimization but makes no guarantees about which row will be kept.",
+          "type": "string",
+          "enum": [
+            "any"
+          ]
+        },
+        {
+          "description": "Do not keep any duplicate rows.",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        }
       ]
     },
     "ExportItem": {
+      "description": "Available exports that can be used in configuration files.",
       "oneOf": [
         {
           "description": "Export data to CSV.",
@@ -176,7 +201,7 @@
           ],
           "properties": {
             "date_format": {
-              "description": "Optional format string to append the current time to the filename - refer to https://docs.rs/chrono/latest/chrono/format/strftime/index.html for available format codes.",
+              "description": "Optional format string to append the current time to the filename - refer to <https://docs.rs/chrono/latest/chrono/format/strftime/index.html> for available format codes.",
               "type": [
                 "string",
                 "null"
@@ -209,6 +234,7 @@
       ],
       "properties": {
         "column": {
+          "description": "Column to apply pattern to.",
           "type": "string"
         },
         "filter": {
@@ -216,12 +242,13 @@
           "type": "boolean"
         },
         "pattern": {
+          "description": "Pattern to match against the column.",
           "type": "string"
         }
       }
     },
     "ExtractGroups": {
-      "description": "Extract all capture groups from a regex into a struct column.",
+      "description": "Extract the capture groups of a regex from the given column.",
       "type": "string"
     },
     "Filter": {
@@ -273,12 +300,36 @@
       }
     },
     "JoinType": {
-      "type": "string",
-      "enum": [
-        "inner",
-        "left",
-        "right",
-        "full"
+      "description": "The method by which to join datasets. Maps to [`polars::prelude::JoinType`].",
+      "oneOf": [
+        {
+          "description": "Inner join - keep only rows that match on both sides.",
+          "type": "string",
+          "enum": [
+            "inner"
+          ]
+        },
+        {
+          "description": "Left join - keep all rows from the left dataset.",
+          "type": "string",
+          "enum": [
+            "left"
+          ]
+        },
+        {
+          "description": "Right join - keep all rows from the right dataset.",
+          "type": "string",
+          "enum": [
+            "right"
+          ]
+        },
+        {
+          "description": "Full join - keep all rows from both datasets.",
+          "type": "string",
+          "enum": [
+            "full"
+          ]
+        }
       ]
     },
     "Loader": {
@@ -286,6 +337,7 @@
       "type": "object",
       "oneOf": [
         {
+          "description": "Load data from CSV.",
           "type": "object",
           "required": [
             "csv"
@@ -298,6 +350,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Load data from another `retl` configuration file.",
           "type": "object",
           "required": [
             "config"
@@ -312,6 +365,7 @@
       ],
       "properties": {
         "transforms": {
+          "description": "Which transformations, if any, to apply to the data before returning it.",
           "default": [],
           "type": "array",
           "items": {
@@ -321,8 +375,10 @@
       }
     },
     "OpItem": {
+      "description": "Possible operations that can be applied to an expression (i.e. [`polars::prelude::Expr`]).",
       "oneOf": [
         {
+          "description": "Extract the capture groups of a regex from the given column.",
           "type": "object",
           "required": [
             "extract_groups"
@@ -335,6 +391,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Name a column using the given alias.",
           "type": "object",
           "required": [
             "alias"
@@ -347,6 +404,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Check if values contain the given regex.",
           "type": "object",
           "required": [
             "contains"
@@ -359,6 +417,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Check if values are null.",
           "type": "object",
           "required": [
             "is_null"
@@ -371,6 +430,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Chain an expression into a logical OR with conditions on one or more columns.",
           "type": "object",
           "required": [
             "or"
@@ -383,6 +443,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Chain an expression into a logical AND with conditions on one or more columns.",
           "type": "object",
           "required": [
             "and"
@@ -464,8 +525,10 @@
       }
     },
     "TransformItem": {
+      "description": "Available transformations that can be used in configuration files.",
       "oneOf": [
         {
+          "description": "Select columns (equivalent to [`LazyFrame::select`])",
           "type": "object",
           "required": [
             "select"
@@ -478,6 +541,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Rename columns (equivalent to [`LazyFrame::rename`])",
           "type": "object",
           "required": [
             "rename"
@@ -490,6 +554,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Filter columns (equivalent to [`LazyFrame::filter`])",
           "type": "object",
           "required": [
             "filter"
@@ -502,6 +567,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Extract capture groups of a regex into separate columns.",
           "type": "object",
           "required": [
             "extract"
@@ -514,6 +580,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Apply [`LazyFrame::unnest`] to the given struct columns.",
           "type": "object",
           "required": [
             "unnest"
@@ -526,6 +593,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Sort the data by one or more columns.",
           "type": "object",
           "required": [
             "sort_by"
@@ -538,6 +606,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Drop duplicate rows from the dataset.",
           "type": "object",
           "required": [
             "drop_duplicates"
@@ -550,6 +619,7 @@
           "additionalProperties": false
         },
         {
+          "description": "Join the dataset with another dataset.",
           "type": "object",
           "required": [
             "join"
