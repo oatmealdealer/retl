@@ -1,21 +1,16 @@
 #:schema schema.json
 
-[source]
-type = "join"
+source.csv.path = "test.csv"
+
+[[transforms]]
+[transforms.join]
+right.csv.path = "test2.csv"
 how = "left"
 left_on = "Foo"
 right_on = "Foo"
 
-[source.left]
-type = "csv"
-path = "test.csv"
-
-[source.right]
-type = "csv"
-path = "test2.csv"
-
-
 [[exports]]
 type = "csv"
-folder = "./output"
+folder = "./output/test"
+date_format = "_%FT%T"
 name = "export"
