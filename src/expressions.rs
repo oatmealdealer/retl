@@ -1,5 +1,5 @@
 //! Expressions that evaluate to an [`Expr`]
-use crate::utils::Error;
+use crate::{ops::OpItem, utils::Error};
 use anyhow::{Context, Result};
 use polars::lazy::prelude::*;
 use schemars::JsonSchema;
@@ -9,7 +9,7 @@ use std::fmt::Debug;
 /// Trait for a data structure that evaluates to a [`Expr`].
 pub trait Expression: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
     /// Produce the expression based on the provided data.
-    fn to_expr(&self) -> Result<Expr>;
+    fn expr(&self) -> Result<Expr>;
 }
 
 /// Available expressions that can be used in configuration files.
@@ -17,23 +17,42 @@ pub trait Expression: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 #[serde(rename_all = "snake_case")]
 pub enum ExpressionItem {
     /// Specify a column by name (equivalent to [`col`]).
-    Column(Column),
+    Col(Column),
     /// Match a regex against a column (equivalent to `col(...).str().contains(...)`).
     Match(Match),
     /// Group 2+ items together in a logical AND statement.
     And(And),
     /// Group 2+ items together in a logical OR statement.
     Or(Or),
+    /// Specify a literal string value (equivalent to [`lit`]).
+    Lit(Literal),
 }
 
-impl ExpressionItem {
-    pub(crate) fn expr(&self) -> Result<Expr> {
+impl Expression for ExpressionItem {
+    fn expr(&self) -> Result<Expr> {
         match self {
-            Self::Column(expr) => expr.to_expr(),
-            Self::Match(expr) => expr.to_expr(),
-            Self::And(expr) => expr.to_expr(),
-            Self::Or(expr) => expr.to_expr(),
+            Self::Col(expr) => expr.expr(),
+            Self::Match(expr) => expr.expr(),
+            Self::And(expr) => expr.expr(),
+            Self::Or(expr) => expr.expr(),
+            Self::Lit(expr) => expr.expr(),
         }
+    }
+}
+
+/// An expression grouped together with chained operations.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct ExpressionChain {
+    expr: ExpressionItem,
+    #[serde(default)]
+    ops: Vec<OpItem>,
+}
+
+impl Expression for ExpressionChain {
+    fn expr(&self) -> Result<Expr> {
+        self.ops
+            .iter()
+            .try_fold(self.expr.expr()?, |expr, op| op.apply(expr))
     }
 }
 
@@ -42,7 +61,7 @@ impl ExpressionItem {
 pub struct Column(String);
 
 impl Expression for Column {
-    fn to_expr(&self) -> Result<Expr> {
+    fn expr(&self) -> Result<Expr> {
         Ok(col(self.0.as_str()))
     }
 }
@@ -57,7 +76,7 @@ pub struct Match {
 }
 
 impl Expression for Match {
-    fn to_expr(&self) -> Result<Expr> {
+    fn expr(&self) -> Result<Expr> {
         Ok(col(&self.column)
             .str()
             .contains(lit(self.pattern.as_str()), true))
@@ -89,7 +108,7 @@ impl TryFrom<Conditions> for And {
 }
 
 impl Expression for And {
-    fn to_expr(&self) -> Result<Expr> {
+    fn expr(&self) -> Result<Expr> {
         let mut expr: Option<Expr> = None;
         for cond in self.conditions.iter() {
             expr = match expr {
@@ -124,7 +143,7 @@ impl TryFrom<Conditions> for Or {
 }
 
 impl Expression for Or {
-    fn to_expr(&self) -> Result<Expr> {
+    fn expr(&self) -> Result<Expr> {
         let mut expr: Option<Expr> = None;
         for cond in self.conditions.iter() {
             expr = match expr {
@@ -133,5 +152,15 @@ impl Expression for Or {
             }
         }
         expr.context("or statement must have at least 2 conditions")
+    }
+}
+
+/// Specify a literal value (equivalent to [`polars::prelude::lit`]).
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
+pub struct Literal(String);
+
+impl Expression for Literal {
+    fn expr(&self) -> Result<Expr> {
+        Ok(lit(self.0.as_str()))
     }
 }

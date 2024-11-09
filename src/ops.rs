@@ -1,5 +1,5 @@
 //! Operations that can be used to modify/compose [`Expr`]s.
-use crate::{expressions::Expression, utils::ColMap};
+use crate::expressions::{Expression, ExpressionChain};
 use anyhow::Result;
 use polars::lazy::prelude::*;
 use schemars::JsonSchema;
@@ -28,10 +28,12 @@ pub enum OpItem {
     Or(Or),
     /// Chain an expression into a logical AND with conditions on one or more columns.
     And(And),
+    /// Fill in null values in a column with an expression.
+    FillNull(FillNull),
 }
 
 impl OpItem {
-    pub(crate) fn expr(&self, expr: Expr) -> Result<Expr> {
+    pub(crate) fn apply(&self, expr: Expr) -> Result<Expr> {
         match self {
             Self::ExtractGroups(op) => op.apply(expr),
             Self::Alias(op) => op.apply(expr),
@@ -39,6 +41,7 @@ impl OpItem {
             Self::IsNull(op) => op.apply(expr),
             Self::Or(op) => op.apply(expr),
             Self::And(op) => op.apply(expr),
+            Self::FillNull(op) => op.apply(expr),
         }
     }
 }
@@ -89,39 +92,40 @@ impl Op for IsNull {
 
 /// Chain an expression into a logical OR with conditions on one or more columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Or(ColMap);
+pub struct Or(Vec<ExpressionChain>);
 
 impl Op for Or {
     fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(self
             .0
             .iter()
-            .try_fold(expr, |chain, (name, ops)| -> Result<Expr> {
-                Ok(chain.or(ops
-                    .iter()
-                    .try_fold(name.to_expr()?, |ex, op| -> Result<Expr> {
-                        Ok(op.expr(ex)?)
-                    })?))
+            .try_fold(expr, |chain, next_expr| -> Result<Expr> {
+                Ok(chain.and(next_expr.expr()?))
             })?)
     }
 }
 
 /// Chain an expression into a logical AND with conditions on one or more columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct And(ColMap);
+pub struct And(Vec<ExpressionChain>);
 
 impl Op for And {
     fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(self
             .0
             .iter()
-            .try_fold(expr, |chain, (name, ops)| -> Result<Expr> {
-                Ok(chain.and(
-                    ops.iter()
-                        .try_fold(name.to_expr()?, |ex, op| -> Result<Expr> {
-                            Ok(op.expr(ex)?)
-                        })?,
-                ))
+            .try_fold(expr, |chain, next_expr| -> Result<Expr> {
+                Ok(chain.and(next_expr.expr()?))
             })?)
+    }
+}
+
+/// Fill in null values with a given expression.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct FillNull(ExpressionChain);
+
+impl Op for FillNull {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.fill_null(self.0.expr()?))
     }
 }

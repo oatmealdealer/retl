@@ -38,33 +38,26 @@
       "type": "string"
     },
     "And": {
-      "description": "Chain an expression into a logical AND with conditions on one or more columns.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/ColMap"
-        }
-      ]
-    },
-    "ColMap": {
-      "type": [
-        "object",
-        "array"
+      "description": "Logical AND against two or more conditions.",
+      "type": "object",
+      "required": [
+        "conditions"
       ],
-      "items": {
-        "type": "array",
-        "items": [
-          {
-            "$ref": "#/definitions/Column"
-          },
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/OpItem"
-            }
+      "properties": {
+        "conditions": {
+          "description": "Conditions to combine.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionItem"
           }
-        ],
-        "maxItems": 2,
-        "minItems": 2
+        }
+      }
+    },
+    "And2": {
+      "description": "Chain an expression into a logical AND with conditions on one or more columns.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExpressionChain"
       }
     },
     "Column": {
@@ -225,6 +218,95 @@
         }
       ]
     },
+    "ExpressionChain": {
+      "description": "An expression grouped together with chained operations.",
+      "type": "object",
+      "required": [
+        "expr"
+      ],
+      "properties": {
+        "expr": {
+          "$ref": "#/definitions/ExpressionItem"
+        },
+        "ops": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OpItem"
+          }
+        }
+      }
+    },
+    "ExpressionItem": {
+      "description": "Available expressions that can be used in configuration files.",
+      "oneOf": [
+        {
+          "description": "Specify a column by name (equivalent to [`col`]).",
+          "type": "object",
+          "required": [
+            "col"
+          ],
+          "properties": {
+            "col": {
+              "$ref": "#/definitions/Column"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Match a regex against a column (equivalent to `col(...).str().contains(...)`).",
+          "type": "object",
+          "required": [
+            "match"
+          ],
+          "properties": {
+            "match": {
+              "$ref": "#/definitions/Match"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Group 2+ items together in a logical AND statement.",
+          "type": "object",
+          "required": [
+            "and"
+          ],
+          "properties": {
+            "and": {
+              "$ref": "#/definitions/And"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Group 2+ items together in a logical OR statement.",
+          "type": "object",
+          "required": [
+            "or"
+          ],
+          "properties": {
+            "or": {
+              "$ref": "#/definitions/Or"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Specify a literal string value (equivalent to [`lit`]).",
+          "type": "object",
+          "required": [
+            "lit"
+          ],
+          "properties": {
+            "lit": {
+              "$ref": "#/definitions/Literal"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "Extract": {
       "description": "Extract capture groups from a regex into separate columns.",
       "type": "object",
@@ -251,13 +333,20 @@
       "description": "Extract the capture groups of a regex from the given column.",
       "type": "string"
     },
-    "Filter": {
-      "description": "Filter rows using a mapping of columns to operations to apply, which must yield boolean values.",
+    "FillNull": {
+      "description": "Fill in null values with a given expression.",
       "allOf": [
         {
-          "$ref": "#/definitions/ColMap"
+          "$ref": "#/definitions/ExpressionChain"
         }
       ]
+    },
+    "Filter": {
+      "description": "Filter rows that match the given expressions, which must yield boolean values.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExpressionChain"
+      }
     },
     "IsNull": {
       "description": "Check if values are null.",
@@ -332,6 +421,10 @@
         }
       ]
     },
+    "Literal": {
+      "description": "Specify a literal value (equivalent to [`polars::prelude::lit`]).",
+      "type": "string"
+    },
     "Loader": {
       "description": "Load data from a given source and apply optional transformations.",
       "type": "object",
@@ -371,6 +464,24 @@
           "items": {
             "$ref": "#/definitions/TransformItem"
           }
+        }
+      }
+    },
+    "Match": {
+      "description": "Match a column against a regex.",
+      "type": "object",
+      "required": [
+        "column",
+        "pattern"
+      ],
+      "properties": {
+        "column": {
+          "description": "Column to apply pattern to.",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "Pattern to match against the column.",
+          "type": "string"
         }
       }
     },
@@ -437,7 +548,7 @@
           ],
           "properties": {
             "or": {
-              "$ref": "#/definitions/Or"
+              "$ref": "#/definitions/Or2"
             }
           },
           "additionalProperties": false
@@ -450,7 +561,20 @@
           ],
           "properties": {
             "and": {
-              "$ref": "#/definitions/And"
+              "$ref": "#/definitions/And2"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Fill in null values in a column with an expression.",
+          "type": "object",
+          "required": [
+            "fill_null"
+          ],
+          "properties": {
+            "fill_null": {
+              "$ref": "#/definitions/FillNull"
             }
           },
           "additionalProperties": false
@@ -458,12 +582,27 @@
       ]
     },
     "Or": {
-      "description": "Chain an expression into a logical OR with conditions on one or more columns.",
-      "allOf": [
-        {
-          "$ref": "#/definitions/ColMap"
+      "description": "Logical OR against two or more conditions.",
+      "type": "object",
+      "required": [
+        "conditions"
+      ],
+      "properties": {
+        "conditions": {
+          "description": "Conditions to combine.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionItem"
+          }
         }
-      ]
+      }
+    },
+    "Or2": {
+      "description": "Chain an expression into a logical OR with conditions on one or more columns.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExpressionChain"
+      }
     },
     "Rename": {
       "description": "Rename columns.",
@@ -488,18 +627,25 @@
     },
     "Schema": true,
     "Select": {
-      "description": "Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].",
-      "allOf": [
-        {
-          "$ref": "#/definitions/ColMap"
-        }
-      ]
+      "description": "Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExpressionChain"
+      }
     },
     "Separator": {
       "description": "A valid ASCII CSV separator, represented internally as a [`u8`].",
       "type": "integer",
       "format": "uint8",
       "minimum": 0.0
+    },
+    "Set": {
+      "description": "Add a column with the given expression.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ExpressionChain"
+        }
+      ]
     },
     "Sort": {
       "description": "Sort a column ascending or descending.",
@@ -627,6 +773,19 @@
           "properties": {
             "join": {
               "$ref": "#/definitions/Join"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Set a column to a specific value.",
+          "type": "object",
+          "required": [
+            "set"
+          ],
+          "properties": {
+            "set": {
+              "$ref": "#/definitions/Set"
             }
           },
           "additionalProperties": false

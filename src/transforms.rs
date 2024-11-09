@@ -1,9 +1,8 @@
 //! Transformations that modify a [`LazyFrame`] and pass it on to other transformations, or to be exported.
 
 use crate::{
-    expressions::{Expression, Match},
+    expressions::{Expression, ExpressionChain, Match},
     sources::Loader,
-    utils::ColMap,
 };
 use anyhow::Result;
 use polars::{lazy::prelude::*, prelude::*};
@@ -37,6 +36,8 @@ pub enum TransformItem {
     DropDuplicates(DropDuplicates),
     /// Join the dataset with another dataset.
     Join(Join),
+    /// Set a column to a specific value.
+    Set(Set),
 }
 
 impl Transform for TransformItem {
@@ -50,20 +51,21 @@ impl Transform for TransformItem {
             Self::SortBy(transform) => transform.transform(lf),
             Self::DropDuplicates(transform) => transform.transform(lf),
             Self::Join(transform) => transform.transform(lf),
+            Self::Set(transform) => transform.transform(lf),
         }
     }
 }
 
-/// Select columns with the applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
+/// Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Select(ColMap);
+pub struct Select(Vec<ExpressionChain>);
 
 impl Transform for Select {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.select(
             self.0
                 .iter()
-                .map(|(k, v)| v.iter().try_fold(k.to_expr()?, |expr, op| op.expr(expr)))
+                .map(<_>::expr)
                 .collect::<Result<Vec<Expr>, _>>()?
                 .as_slice(),
         ))
@@ -95,17 +97,17 @@ impl Transform for Rename {
     }
 }
 
-/// Filter rows using a mapping of columns to operations to apply, which must yield boolean values.
+/// Filter rows that match the given expressions, which must yield boolean values.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Filter(ColMap);
+pub struct Filter(Vec<ExpressionChain>);
 
 impl Transform for Filter {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(self
             .0
             .iter()
-            .try_fold(lf, |lf, (k, v)| -> Result<LazyFrame> {
-                Ok(lf.filter(v.iter().try_fold(k.to_expr()?, |expr, op| op.expr(expr))?))
+            .try_fold(lf, |lf, chain| -> Result<LazyFrame> {
+                Ok(lf.filter(chain.expr()?))
             })?)
     }
 }
@@ -122,7 +124,7 @@ pub struct Extract {
 impl Transform for Extract {
     fn transform(&self, mut lf: LazyFrame) -> Result<LazyFrame> {
         if self.filter {
-            lf = lf.filter(self.matcher.to_expr()?);
+            lf = lf.filter(self.matcher.expr()?);
         }
 
         // TODO: See if this can be done without an intermediate alias
@@ -260,5 +262,15 @@ impl Transform for Join {
             })
             .with_coalesce(JoinCoalesce::CoalesceColumns),
         ))
+    }
+}
+
+/// Add a column with the given expression.
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub struct Set(ExpressionChain);
+
+impl Transform for Set {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        Ok(lf.select([col("*"), self.0.expr()?]))
     }
 }

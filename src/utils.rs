@@ -1,26 +1,5 @@
-use std::{ops::Deref, path::Path};
-
-use crate::{expressions::Column, ops::OpItem};
 use anyhow::Result;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub(crate) struct ColMap {
-    #[serde(
-        flatten,
-        serialize_with = "tuple_vec_map::serialize",
-        deserialize_with = "tuple_vec_map::deserialize"
-    )]
-    pub(crate) inner: Vec<(Column, Vec<OpItem>)>,
-}
-
-impl Deref for ColMap {
-    type Target = Vec<(Column, Vec<OpItem>)>;
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
+use std::path::Path;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
