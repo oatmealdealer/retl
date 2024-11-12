@@ -44,14 +44,21 @@ impl Config {
         Ok(())
     }
     /// Load a configuration from the given path.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn from_path<P, F, R>(path: P, func: F) -> Result<R>
+    where
+        P: AsRef<Path>,
+        F: Fn(Self) -> Result<R>,
+    {
         let canonical_path = path.as_ref().canonicalize()?;
         let file = std::fs::read_to_string(&canonical_path)?;
         with_current_dir(
             canonical_path
                 .parent()
                 .expect("path cannot be filesystem root"),
-            move || toml::from_str(&file).map_err(<_>::into),
+            move || {
+                let config: Self = toml::from_str(&file)?;
+                func(config)
+            },
         )
     }
 }

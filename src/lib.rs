@@ -7,7 +7,7 @@ pub mod expressions;
 pub mod ops;
 pub mod sources;
 pub mod transforms;
-pub(crate) mod utils;
+pub mod utils;
 
 pub use config::Config;
 

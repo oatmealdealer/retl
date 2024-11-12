@@ -7,6 +7,7 @@ use anyhow::Result;
 use clap::Parser;
 use retl::Config;
 use schemars::schema_for;
+use tracing::debug;
 
 #[derive(Parser)]
 enum Cli {
@@ -15,7 +16,7 @@ enum Cli {
     /// Dump the configuration JSON schema to the given path.
     DumpSchema {
         /// Path to dump the JSON schema to.
-        path: PathBuf
+        path: PathBuf,
     },
 }
 
@@ -25,8 +26,12 @@ struct RunArgs {
     config: PathBuf,
 }
 fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
     match Cli::parse() {
-        Cli::Run(args) => Config::from_path(&args.config)?.run(),
+        Cli::Run(args) => Config::from_path(&args.config, |config| {
+            debug!("Running parsed config: {:?}", config);
+            config.run()
+        }),
         Cli::DumpSchema { path } => {
             let schema = schema_for!(Config);
             let writer = std::fs::File::create(path)?;
