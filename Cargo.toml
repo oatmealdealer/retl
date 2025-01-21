@@ -1,17 +1,15 @@
 [package]
-name = "retl"
+name    = "retl"
 version = "0.1.0"
 edition = "2021"
 
-
-
 [dependencies]
-anyhow = "1.0.86"
-calamine = "0.25.0"
+anyhow = "1.0.95"
+calamine = "0.26.1"
 chrono = "0.4.38"
 clap = { version = "4.5.16", features = ["derive"] }
 glob = "0.3.1"
-polars = { version = "0.42.0", features = [
+polars = { version = "0.45.1", features = [
     "csv",
     "lazy",
     "temporal",
@@ -26,13 +24,15 @@ polars = { version = "0.42.0", features = [
     "array_to_struct",
     "list_to_struct",
     "extract_groups",
+    "json",
+    "polars-io",
 ] }
 regex = "1.10.6"
 schemars = "0.8.21"
 serde = "1.0.209"
 serde-tuple-vec-map = "1.0.1"
 serde_json = "1.0.127"
-thiserror = "1.0.63"
+thiserror = "2.0.11"
 tokio = "1.40.0"
 toml = "0.8.19"
 tracing = "0.1.40"
@@ -40,7 +40,7 @@ tracing-subscriber = "0.3.18"
 
 [profile.release]
 opt-level = 2
-lto = true
+lto       = true
 
 [lints.rust]
 missing_docs = "warn"
