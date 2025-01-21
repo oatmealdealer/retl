@@ -73,7 +73,11 @@
       "properties": {
         "path": {
           "description": "Path to the configuration file.",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/definitions/String"
+            }
+          ]
         }
       }
     },
@@ -97,7 +101,11 @@
         },
         "path": {
           "description": "The path to load files from. This path is passed directly to [`LazyCsvReader`], so paths with globs are permissible (e.g. `./files/*.csv`).",
-          "type": "string"
+          "allOf": [
+            {
+              "$ref": "#/definitions/String"
+            }
+          ]
         },
         "schema": {
           "description": "Optional [`polars::prelude::Schema`] to enforce specific datatypes.",
@@ -121,6 +129,13 @@
             }
           ]
         }
+      }
+    },
+    "Drop": {
+      "description": "Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExpressionChain"
       }
     },
     "DropDuplicates": {
@@ -178,6 +193,14 @@
           "enum": [
             "none"
           ]
+        }
+      ]
+    },
+    "Eq": {
+      "description": "Filter rows that are equal to the given expression.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ExpressionChain"
         }
       ]
     },
@@ -348,6 +371,14 @@
         "$ref": "#/definitions/ExpressionChain"
       }
     },
+    "GtEq": {
+      "description": "Filter rows that are greater than or equal to the given expression.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ExpressionChain"
+        }
+      ]
+    },
     "IsNull": {
       "description": "Check if values are null.",
       "type": "boolean"
@@ -421,6 +452,80 @@
         }
       ]
     },
+    "JsonLineSource": {
+      "description": "Load data from newline-delimited JSON files.",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "The path to load files from. This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible (e.g. `./files/*.csv`).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/String"
+            }
+          ]
+        },
+        "schema": {
+          "description": "Optional [`polars::prelude::Schema`] to enforce specific datatypes.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Schema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "JsonSource": {
+      "description": "Load data from a JSON file.",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "The path to load files from. This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible (e.g. `./files/*.csv`).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/String"
+            }
+          ]
+        },
+        "schema": {
+          "description": "Optional [`polars::prelude::Schema`] to enforce specific datatypes.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Schema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "List": {
+      "description": "Apply a `list`-namespaced operation.",
+      "oneOf": [
+        {
+          "description": "Join a list column with a string separator.",
+          "type": "object",
+          "required": [
+            "join"
+          ],
+          "properties": {
+            "join": {
+              "$ref": "#/definitions/ExpressionChain"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "Literal": {
       "description": "Specify a literal value (equivalent to [`polars::prelude::lit`]).",
       "type": "string"
@@ -438,6 +543,32 @@
           "properties": {
             "csv": {
               "$ref": "#/definitions/CsvSource"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Load data from newline-delimited JSON files.",
+          "type": "object",
+          "required": [
+            "json_line"
+          ],
+          "properties": {
+            "json_line": {
+              "$ref": "#/definitions/JsonLineSource"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Load data from a JSON file.",
+          "type": "object",
+          "required": [
+            "json"
+          ],
+          "properties": {
+            "json": {
+              "$ref": "#/definitions/JsonSource"
             }
           },
           "additionalProperties": false
@@ -466,6 +597,14 @@
           }
         }
       }
+    },
+    "LtEq": {
+      "description": "Filter rows that are less than or equal to the given expression.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ExpressionChain"
+        }
+      ]
     },
     "Match": {
       "description": "Match a column against a regex.",
@@ -578,6 +717,71 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "Apply a `str`-namespaced operation.",
+          "type": "object",
+          "required": [
+            "str"
+          ],
+          "properties": {
+            "str": {
+              "$ref": "#/definitions/Str"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Filter rows that are equal to the given expression.",
+          "type": "object",
+          "required": [
+            "eq"
+          ],
+          "properties": {
+            "eq": {
+              "$ref": "#/definitions/Eq"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Filter rows that are greater than or equal to the given expression.",
+          "type": "object",
+          "required": [
+            "gt_eq"
+          ],
+          "properties": {
+            "gt_eq": {
+              "$ref": "#/definitions/GtEq"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Filter rows that are less than or equal to the given expression.",
+          "type": "object",
+          "required": [
+            "lt_eq"
+          ],
+          "properties": {
+            "lt_eq": {
+              "$ref": "#/definitions/LtEq"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Apply a `list`-namespaced operation.",
+          "type": "object",
+          "required": [
+            "list"
+          ],
+          "properties": {
+            "list": {
+              "$ref": "#/definitions/List"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -670,6 +874,21 @@
         "$ref": "#/definitions/Sort"
       }
     },
+    "Str": {
+      "description": "Apply a `str`-namespaced operation.",
+      "oneOf": [
+        {
+          "description": "Convert the string column to lowercase.",
+          "type": "string",
+          "enum": [
+            "to_lowercase"
+          ]
+        }
+      ]
+    },
+    "String": {
+      "type": "string"
+    },
     "TransformItem": {
       "description": "Available transformations that can be used in configuration files.",
       "oneOf": [
@@ -682,6 +901,19 @@
           "properties": {
             "select": {
               "$ref": "#/definitions/Select"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Drop columns (equivalent to [`LazyFrame::drop`])",
+          "type": "object",
+          "required": [
+            "drop"
+          ],
+          "properties": {
+            "drop": {
+              "$ref": "#/definitions/Drop"
             }
           },
           "additionalProperties": false
