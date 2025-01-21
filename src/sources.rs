@@ -6,7 +6,7 @@ use crate::{
     utils::{CanonicalPath, CanonicalPaths},
 };
 use anyhow::Result;
-use polars::lazy::prelude::*;
+use polars::{io::SerReader, lazy::prelude::*, prelude::JsonReader};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, path::PathBuf, sync::Arc};
@@ -23,6 +23,10 @@ pub trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 pub enum SourceItem {
     /// Load data from CSV.
     Csv(CsvSource),
+    /// Load data from newline-delimited JSON files.
+    JsonLine(JsonLineSource),
+    /// Load data from a JSON file.
+    Json(JsonSource),
     /// Load data from another `retl` configuration file.
     Config(ConfigSource),
 }
@@ -31,6 +35,8 @@ impl Source for SourceItem {
     fn load(&self) -> Result<LazyFrame> {
         match self {
             Self::Csv(source) => source.load(),
+            Self::JsonLine(source) => source.load(),
+            Self::Json(source) => source.load(),
             Self::Config(source) => source.load(),
         }
     }
@@ -102,7 +108,7 @@ pub struct CsvSource {
 
 impl Source for CsvSource {
     fn load(&self) -> Result<LazyFrame> {
-        let mut reader = LazyCsvReader::new_paths(self.path.clone());
+        let mut reader = LazyCsvReader::new_paths(self.path.clone().as_slice().into());
         reader = reader.with_has_header(self.has_header.as_ref().unwrap_or(&true).to_owned());
         if self.separator.is_some() {
             reader = reader.with_separator(self.separator.as_ref().unwrap().0)
@@ -111,6 +117,47 @@ impl Source for CsvSource {
             .with_truncate_ragged_lines(true)
             .with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
+    }
+}
+
+/// Load data from newline-delimited JSON files.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct JsonLineSource {
+    /// The path to load files from.
+    /// This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible
+    /// (e.g. `./files/*.csv`).
+    pub path: CanonicalPaths,
+    /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
+    pub schema: Option<Schema>,
+}
+
+impl Source for JsonLineSource {
+    fn load(&self) -> Result<LazyFrame> {
+        let mut reader = LazyJsonLineReader::new_paths(self.path.clone().as_slice().into());
+        reader = reader.with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
+        Ok(reader.finish()?)
+    }
+}
+
+/// Load data from a JSON file.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct JsonSource {
+    /// The path to load files from.
+    /// This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible
+    /// (e.g. `./files/*.csv`).
+    pub path: CanonicalPath,
+    /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
+    pub schema: Option<Schema>,
+}
+
+impl Source for JsonSource {
+    fn load(&self) -> Result<LazyFrame> {
+        let file = std::fs::File::open(&self.path)?;
+        let mut df = JsonReader::new(file);
+        if let Some(schema) = self.schema.as_ref().map(|s| Arc::new(s.0.clone())) {
+            df = df.with_schema(schema);
+        }
+        Ok(df.finish()?.lazy())
     }
 }
 
