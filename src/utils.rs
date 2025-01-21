@@ -35,7 +35,7 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPaths(Arc<Vec<PathBuf>>);
 
@@ -51,6 +51,15 @@ impl TryFrom<PathBuf> for CanonicalPaths {
     }
 }
 
+impl JsonSchema for CanonicalPaths {
+    fn schema_name() -> String {
+        PathBuf::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        PathBuf::json_schema(gen)
+    }
+}
+
 impl Deref for CanonicalPaths {
     type Target = Arc<Vec<PathBuf>>;
     fn deref(&self) -> &Self::Target {
@@ -58,9 +67,18 @@ impl Deref for CanonicalPaths {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, JsonSchema, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPath(PathBuf);
+
+impl JsonSchema for CanonicalPath {
+    fn schema_name() -> String {
+        PathBuf::schema_name()
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        PathBuf::json_schema(gen)
+    }
+}
 
 impl TryFrom<PathBuf> for CanonicalPath {
     type Error = anyhow::Error;
