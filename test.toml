@@ -9,6 +9,16 @@ how = "left"
 left_on = "Foo"
 right_on = "Foo"
 
+[[transforms]]
+select = [
+    { expr = { col = "*"}},
+    { expr = { lit = "5"}, ops = [
+        { alias = "foobar"}
+    ] }
+]
+
+
+
 [[exports]]
 type = "csv"
 folder = "./output/test"
