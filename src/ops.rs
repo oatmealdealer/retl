@@ -30,6 +30,16 @@ pub enum OpItem {
     And(And),
     /// Fill in null values in a column with an expression.
     FillNull(FillNull),
+    /// Apply a `str`-namespaced operation.
+    Str(Str),
+    /// Filter rows that are equal to the given expression.
+    Eq(Eq),
+    /// Filter rows that are greater than or equal to the given expression.
+    GtEq(GtEq),
+    /// Filter rows that are less than or equal to the given expression.
+    LtEq(LtEq),
+    /// Apply a `list`-namespaced operation.
+    List(List),
 }
 
 impl OpItem {
@@ -42,6 +52,11 @@ impl OpItem {
             Self::Or(op) => op.apply(expr),
             Self::And(op) => op.apply(expr),
             Self::FillNull(op) => op.apply(expr),
+            Self::Str(op) => op.apply(expr),
+            Self::Eq(op) => op.apply(expr),
+            Self::GtEq(op) => op.apply(expr),
+            Self::LtEq(op) => op.apply(expr),
+            Self::List(op) => op.apply(expr),
         }
     }
 }
@@ -127,5 +142,69 @@ pub struct FillNull(ExpressionChain);
 impl Op for FillNull {
     fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.fill_null(self.0.expr()?))
+    }
+}
+
+/// Apply a `str`-namespaced operation.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Str {
+    /// Convert the string column to lowercase.
+    ToLowercase,
+}
+
+impl Op for Str {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        let ns = expr.str();
+        Ok(match self {
+            Self::ToLowercase => ns.to_lowercase(),
+        })
+    }
+}
+
+/// Filter rows that are equal to the given expression.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Eq(ExpressionChain);
+
+impl Op for Eq {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.eq(self.0.expr()?))
+    }
+}
+
+/// Filter rows that are greater than or equal to the given expression.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct GtEq(ExpressionChain);
+
+impl Op for GtEq {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.gt_eq(self.0.expr()?))
+    }
+}
+
+/// Filter rows that are less than or equal to the given expression.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct LtEq(ExpressionChain);
+
+impl Op for LtEq {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.lt_eq(self.0.expr()?))
+    }
+}
+
+/// Apply a `list`-namespaced operation.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum List {
+    /// Join a list column with a string separator.
+    Join(ExpressionChain),
+}
+
+impl Op for List {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        let ns = expr.list();
+        Ok(match self {
+            Self::Join(chain) => ns.join(chain.expr()?, true),
+        })
     }
 }
