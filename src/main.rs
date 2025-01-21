@@ -28,7 +28,7 @@ struct RunArgs {
 fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     match Cli::parse() {
-        Cli::Run(args) => Config::from_path(&args.config, |config| {
+        Cli::Run(args) => Config::from_path(&args.config.canonicalize()?, |config| {
             debug!("Running parsed config: {:?}", config);
             config.run()
         }),
