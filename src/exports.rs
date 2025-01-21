@@ -62,6 +62,7 @@ impl Export for CsvExport {
             CsvWriterOptions {
                 ..Default::default()
             },
+            None,
         )?;
         Ok(())
     }
