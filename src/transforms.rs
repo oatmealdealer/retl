@@ -22,6 +22,8 @@ pub trait Transform: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 pub enum TransformItem {
     /// Select columns (equivalent to [`LazyFrame::select`])
     Select(Select),
+    /// Drop columns (equivalent to [`LazyFrame::drop`])
+    Drop(Drop),
     /// Rename columns (equivalent to [`LazyFrame::rename`])
     Rename(Rename),
     /// Filter columns (equivalent to [`LazyFrame::filter`])
@@ -44,6 +46,7 @@ impl Transform for TransformItem {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         match self {
             Self::Select(transform) => transform.transform(lf),
+            Self::Drop(transform) => transform.transform(lf),
             Self::Rename(transform) => transform.transform(lf),
             Self::Filter(transform) => transform.transform(lf),
             Self::Extract(transform) => transform.transform(lf),
@@ -72,6 +75,21 @@ impl Transform for Select {
     }
 }
 
+/// Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Drop(Vec<ExpressionChain>);
+
+impl Transform for Drop {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        Ok(lf.drop(
+            self.0
+                .iter()
+                .map(<_>::expr)
+                .collect::<Result<Vec<Expr>, _>>()?,
+        ))
+    }
+}
+
 /// Rename columns.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -85,7 +103,7 @@ pub enum Rename {
 impl Transform for Rename {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         match self {
-            Self::Map(columns) => Ok(lf.rename(columns.keys(), columns.values())),
+            Self::Map(columns) => Ok(lf.rename(columns.keys(), columns.values(), true)),
             // TODO: Fix successive uses of this not stacking properly
             // Self::Prefix(_prefix) => {
             //     let prefix = _prefix.clone();
