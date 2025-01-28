@@ -29,6 +29,8 @@ pub enum SourceItem {
     Json(JsonSource),
     /// Load data from another `retl` configuration file.
     Config(ConfigSource),
+    /// Load data from a .parquet file.
+    Parquet(ParquetSource),
 }
 
 impl Source for SourceItem {
@@ -38,6 +40,7 @@ impl Source for SourceItem {
             Self::JsonLine(source) => source.load(),
             Self::Json(source) => source.load(),
             Self::Config(source) => source.load(),
+            Self::Parquet(source) => source.load(),
         }
     }
 }
@@ -171,5 +174,30 @@ pub struct ConfigSource {
 impl Source for ConfigSource {
     fn load(&self) -> Result<LazyFrame> {
         Config::from_path(&self.path, |config| config.load())
+    }
+}
+
+/// Import another configuration file to be used as a data source.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct ParquetSource {
+    /// Path to the configuration file.
+    pub path: CanonicalPath,
+    /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
+    pub schema: Option<Schema>,
+}
+
+impl Source for ParquetSource {
+    fn load(&self) -> Result<LazyFrame> {
+        Ok(LazyFrame::scan_parquet(
+            &self.path,
+            ScanArgsParquet {
+                schema: self
+                    .schema
+                    .as_ref()
+                    .map(|schema| Arc::new(schema.0.clone())),
+
+                ..Default::default()
+            },
+        )?)
     }
 }

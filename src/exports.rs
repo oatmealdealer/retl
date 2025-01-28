@@ -21,12 +21,15 @@ pub trait Export: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 pub enum ExportItem {
     /// Export data to CSV.
     Csv(CsvExport),
+    /// Export data to JSON lines.
+    Json(JsonExport),
 }
 
 impl ExportItem {
     pub(crate) fn export(&self, lf: LazyFrame) -> Result<()> {
         match self {
             Self::Csv(export) => export.export(lf),
+            Self::Json(export) => export.export(lf),
         }
     }
 }
@@ -62,6 +65,41 @@ impl Export for CsvExport {
             CsvWriterOptions {
                 ..Default::default()
             },
+            None,
+        )?;
+        Ok(())
+    }
+}
+
+/// Export data to CSV.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct JsonExport {
+    /// Folder in which to create files.
+    pub folder: PathBuf,
+    /// Name of the output file, not including the file extension.
+    pub name: String,
+    /// Optional format string to append the current time to the filename -
+    /// refer to <https://docs.rs/chrono/latest/chrono/format/strftime/index.html> for available format codes.
+    pub date_format: Option<String>,
+}
+
+impl Export for JsonExport {
+    fn export(&self, lf: LazyFrame) -> Result<()> {
+        std::fs::create_dir_all(&self.folder)?;
+        let mut filename = String::new();
+        filename.write_str(&self.name)?;
+        if let Some(fstring) = &self.date_format {
+            filename.write_str(
+                &chrono::Local::now()
+                    .naive_local()
+                    .format(&fstring)
+                    .to_string(),
+            )?
+        }
+        filename.write_str(".jsonl")?;
+        lf.sink_json(
+            self.folder.join(filename),
+            JsonWriterOptions::default(),
             None,
         )?;
         Ok(())

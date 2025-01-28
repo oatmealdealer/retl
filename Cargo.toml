@@ -26,6 +26,7 @@ polars = { version = "0.45.1", features = [
     "extract_groups",
     "json",
     "polars-io",
+    "parquet",
 ] }
 regex = "1.10.6"
 schemars = "0.8.21"
