@@ -1,10 +1,13 @@
 //! Operations that can be used to modify/compose [`Expr`]s.
-use crate::expressions::{Expression, ExpressionChain};
+use crate::{
+    expressions::{Expression, ExpressionChain},
+    utils::DataType,
+};
 use anyhow::Result;
-use polars::lazy::prelude::*;
+use polars::{lazy::prelude::*, prelude::*};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Deref};
 
 /// Trait for an operation that modifies an expression supplied as input.
 pub trait Op: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
@@ -40,6 +43,13 @@ pub enum OpItem {
     LtEq(LtEq),
     /// Apply a `list`-namespaced operation.
     List(List),
+    Div(Div),
+    Mul(Mul),
+    Add(Add),
+    Sub(Sub),
+    Cast(Cast),
+    Struct(Struct),
+    // Dt(Dt),
 }
 
 impl OpItem {
@@ -57,6 +67,12 @@ impl OpItem {
             Self::GtEq(op) => op.apply(expr),
             Self::LtEq(op) => op.apply(expr),
             Self::List(op) => op.apply(expr),
+            Self::Div(op) => op.apply(expr),
+            Self::Mul(op) => op.apply(expr),
+            Self::Add(op) => op.apply(expr),
+            Self::Sub(op) => op.apply(expr),
+            Self::Cast(op) => op.apply(expr),
+            Self::Struct(op) => op.apply(expr),
         }
     }
 }
@@ -151,6 +167,44 @@ impl Op for FillNull {
 pub enum Str {
     /// Convert the string column to lowercase.
     ToLowercase,
+    ToDate(StrptimeOptions),
+    ToDateTime {
+        time_unit: Option<TimeUnit>,
+        time_zone: Option<TimeZone>,
+        options: StrptimeOptions,
+        ambiguous: Ambiguous,
+    },
+    ReplaceAll {
+        pat: String,
+        value: ExpressionChain,
+        literal: bool,
+    },
+    JsonDecode {
+        dtype: Option<DataType>,
+        infer_schema_len: Option<usize>,
+    },
+    Zfill(u16),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Ambiguous {
+    #[default]
+    Raise,
+    Earliest,
+    Latest,
+    Null,
+}
+
+impl Expression for Ambiguous {
+    fn expr(&self) -> Result<Expr> {
+        Ok(match self {
+            Self::Raise => lit("raise"),
+            Self::Earliest => lit("earliest"),
+            Self::Latest => lit("latest"),
+            Self::Null => lit("null"),
+        })
+    }
 }
 
 impl Op for Str {
@@ -158,6 +212,31 @@ impl Op for Str {
         let ns = expr.str();
         Ok(match self {
             Self::ToLowercase => ns.to_lowercase(),
+            Self::ToDate(options) => ns.to_date(options.clone()),
+            Self::ToDateTime {
+                time_unit,
+                time_zone,
+                options,
+                ambiguous,
+            } => ns.to_datetime(
+                time_unit.clone(),
+                time_zone.clone(),
+                options.clone(),
+                ambiguous.expr()?,
+            ),
+            Self::ReplaceAll {
+                pat,
+                value,
+                literal,
+            } => ns.replace_all(lit(pat.as_str()), value.expr()?, *literal),
+            Self::JsonDecode {
+                dtype,
+                infer_schema_len,
+            } => ns.json_decode(
+                dtype.as_ref().map(|pldt| pldt.deref().clone()),
+                *infer_schema_len,
+            ),
+            Self::Zfill(len) => ns.zfill(lit(*len)),
         })
     }
 }
@@ -205,6 +284,69 @@ impl Op for List {
         let ns = expr.list();
         Ok(match self {
             Self::Join(chain) => ns.join(chain.expr()?, true),
+        })
+    }
+}
+
+/// Divide the expression by another.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Div(ExpressionChain);
+
+impl Op for Div {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr / self.0.expr()?)
+    }
+}
+
+/// Multiply the expression by another.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Mul(ExpressionChain);
+
+impl Op for Mul {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr * self.0.expr()?)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Add(ExpressionChain);
+
+impl Op for Add {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr + self.0.expr()?)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Sub(ExpressionChain);
+
+impl Op for Sub {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr - self.0.expr()?)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Cast(DataType);
+
+impl Op for Cast {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.cast(self.0.deref().clone()))
+    }
+}
+
+/// Apply a `struct_`-namespaced operation.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Struct {
+    JsonEncode,
+}
+
+impl Op for Struct {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        let ns = expr.struct_();
+        Ok(match self {
+            Self::JsonEncode => ns.json_encode(),
         })
     }
 }

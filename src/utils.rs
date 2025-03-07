@@ -1,3 +1,4 @@
+//! General utility types and functions.
 use anyhow::{Context as _, Result};
 use glob::glob;
 use schemars::JsonSchema;
@@ -8,10 +9,13 @@ use std::{
     sync::Arc,
 };
 
+/// Errors that can be encountered during configuration parsing.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// Returned when attempting to run a configuration does not contain any exports.
     #[error("must define at least one export")]
     NoExports,
+    /// Other unspecified error encountered during parsing.
     #[error("{0}")]
     Other(String),
 }
@@ -35,6 +39,7 @@ where
     }
 }
 
+/// One or more paths that are canonicalized (see [`std::fs::canonicalize`]) and guaranteed to exist.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPaths(Arc<Vec<PathBuf>>);
@@ -67,6 +72,7 @@ impl Deref for CanonicalPaths {
     }
 }
 
+/// A single path that is canonicalized (see [`std::fs::canonicalize`]) and guaranteed to exist.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPath(PathBuf);
@@ -97,5 +103,26 @@ impl Deref for CanonicalPath {
 impl AsRef<Path> for CanonicalPath {
     fn as_ref(&self) -> &Path {
         self.0.as_path()
+    }
+}
+
+/// Wraps [`polars::prelude::DataType`].
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DataType(polars::prelude::DataType);
+
+impl JsonSchema for DataType {
+    fn schema_name() -> String {
+        "DataType".to_owned()
+    }
+    fn json_schema(_: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Bool(true)
+    }
+}
+
+impl Deref for DataType {
+    type Target = polars::prelude::DataType;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
