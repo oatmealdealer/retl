@@ -1,7 +1,7 @@
 //! Expressions that evaluate to an [`Expr`]
 use crate::{ops::OpItem, utils::Error};
 use anyhow::{Context, Result};
-use polars::lazy::prelude::*;
+use polars::{lazy::prelude::*, prelude::Literal as _};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -26,6 +26,10 @@ pub enum ExpressionItem {
     Or(Or),
     /// Specify a literal string value (equivalent to [`lit`]).
     Lit(Literal),
+    /// Literal null value.
+    Null,
+    /// Combine one or more expressions into a struct column as fields.
+    AsStruct(AsStruct),
 }
 
 impl Expression for ExpressionItem {
@@ -36,6 +40,8 @@ impl Expression for ExpressionItem {
             Self::And(expr) => expr.expr(),
             Self::Or(expr) => expr.expr(),
             Self::Lit(expr) => expr.expr(),
+            Self::Null => Ok(NULL.lit()),
+            Self::AsStruct(expr) => expr.expr(),
         }
     }
 }
@@ -162,5 +168,20 @@ pub struct Literal(String);
 impl Expression for Literal {
     fn expr(&self) -> Result<Expr> {
         Ok(lit(self.0.as_str()))
+    }
+}
+
+/// Combine one or more expressions into a struct column as fields.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct AsStruct(Vec<ExpressionChain>);
+
+impl Expression for AsStruct {
+    fn expr(&self) -> Result<Expr> {
+        Ok(as_struct(
+            self.0
+                .iter()
+                .map(|chain| chain.expr())
+                .collect::<Result<Vec<Expr>>>()?,
+        ))
     }
 }
