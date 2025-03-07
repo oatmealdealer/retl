@@ -379,6 +379,7 @@
         }
       ]
     },
+    "InlineSource": true,
     "IsNull": {
       "description": "Check if values are null.",
       "type": "boolean"
@@ -582,6 +583,18 @@
           "properties": {
             "config": {
               "$ref": "#/definitions/ConfigSource"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "inline"
+          ],
+          "properties": {
+            "inline": {
+              "$ref": "#/definitions/InlineSource"
             }
           },
           "additionalProperties": false

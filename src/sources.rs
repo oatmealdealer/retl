@@ -6,10 +6,10 @@ use crate::{
     utils::{CanonicalPath, CanonicalPaths},
 };
 use anyhow::Result;
-use polars::{io::SerReader, lazy::prelude::*, prelude::JsonReader};
+use polars::{frame::DataFrame, io::SerReader, lazy::prelude::*, prelude::JsonReader};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, path::PathBuf, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 /// Trait for a source of data that can be loaded into a [`LazyFrame`].
 pub trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
@@ -31,6 +31,22 @@ pub enum SourceItem {
     Config(ConfigSource),
     /// Load data from a .parquet file.
     Parquet(ParquetSource),
+    /// Experimental source for inlining a dataframe, used for mapping columns from one set of values to another via joins.
+    /// Example:
+    /// ```toml
+    ///     [source.inline]
+    ///
+    ///     [[source.inline.columns]]
+    ///     name     = "title"
+    ///     datatype = "String"
+    ///     values   = ["Foo", "Bar", "Baz"]
+    ///
+    ///     [[source.inline.columns]]
+    ///     name     = "number"
+    ///     datatype = "UInt64"
+    ///     values   = [1, 2, 3]
+    /// ```
+    Inline(InlineSource),
 }
 
 impl Source for SourceItem {
@@ -41,6 +57,7 @@ impl Source for SourceItem {
             Self::Json(source) => source.load(),
             Self::Config(source) => source.load(),
             Self::Parquet(source) => source.load(),
+            Self::Inline(source) => source.load(),
         }
     }
 }
@@ -199,5 +216,38 @@ impl Source for ParquetSource {
                 ..Default::default()
             },
         )?)
+    }
+}
+
+/// Experimental source for inlining a dataframe, used for mapping columns from one set of values to another via joins.
+/// Example:
+/// ```toml
+///     [source.inline]
+///
+///     [[source.inline.columns]]
+///     name     = "title"
+///     datatype = "String"
+///     values   = ["Foo", "Bar", "Baz"]
+///
+///     [[source.inline.columns]]
+///     name     = "number"
+///     datatype = "UInt64"
+///     values   = [1, 2, 3]
+/// ```
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InlineSource(DataFrame);
+
+impl Source for InlineSource {
+    fn load(&self) -> Result<LazyFrame> {
+        Ok(self.0.clone().lazy())
+    }
+}
+
+impl JsonSchema for InlineSource {
+    fn schema_name() -> String {
+        "InlineSource".to_owned()
+    }
+    fn json_schema(_: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        schemars::schema::Schema::Bool(true)
     }
 }
