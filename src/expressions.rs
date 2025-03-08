@@ -1,10 +1,13 @@
 //! Expressions that evaluate to an [`Expr`]
-use crate::{ops::OpItem, utils::Error};
+use crate::{
+    ops::OpItem,
+    utils::{DataType, Error},
+};
 use anyhow::{Context, Result};
 use polars::{lazy::prelude::*, prelude::Literal as _};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::Deref};
 
 /// Trait for a data structure that evaluates to a [`Expr`].
 pub trait Expression: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
@@ -28,8 +31,14 @@ pub enum ExpressionItem {
     Lit(Literal),
     /// Literal null value.
     Null,
+    /// Evaluates to the number of rows.
+    Len,
     /// Combine one or more expressions into a struct column as fields.
     AsStruct(AsStruct),
+    /// Generate a range of integers.
+    IntRange(IntRange),
+    /// Concatenate string expressions horizontally.
+    ConcatStr(ConcatStr),
 }
 
 impl Expression for ExpressionItem {
@@ -41,7 +50,10 @@ impl Expression for ExpressionItem {
             Self::Or(expr) => expr.expr(),
             Self::Lit(expr) => expr.expr(),
             Self::Null => Ok(NULL.lit()),
+            Self::Len => Ok(len()),
             Self::AsStruct(expr) => expr.expr(),
+            Self::IntRange(expr) => expr.expr(),
+            Self::ConcatStr(expr) => expr.expr(),
         }
     }
 }
@@ -182,6 +194,48 @@ impl Expression for AsStruct {
                 .iter()
                 .map(|chain| chain.expr())
                 .collect::<Result<Vec<Expr>>>()?,
+        ))
+    }
+}
+
+/// Generate a range of integers.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct IntRange {
+    start: i64,
+    // end:
+    step: i64,
+    dtype: DataType,
+}
+
+impl Expression for IntRange {
+    fn expr(&self) -> Result<Expr> {
+        Ok(int_range(
+            lit(self.start),
+            len(),
+            self.step,
+            self.dtype.deref().clone(),
+        ))
+    }
+}
+
+/// Concatenate string expressions horizontally.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct ConcatStr {
+    columns: Vec<ExpressionChain>,
+    separator: String,
+    ignore_nulls: bool,
+}
+
+impl Expression for ConcatStr {
+    fn expr(&self) -> Result<Expr> {
+        Ok(concat_str(
+            self.columns
+                .iter()
+                .map(|chain| chain.expr())
+                .collect::<Result<Vec<Expr>>>()?
+                .as_slice(),
+            self.separator.as_str(),
+            self.ignore_nulls,
         ))
     }
 }

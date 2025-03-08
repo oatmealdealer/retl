@@ -33,9 +33,21 @@
     }
   },
   "definitions": {
+    "Add": {
+      "$ref": "#/definitions/ExpressionChain"
+    },
     "Alias": {
       "description": "Name a column using the given alias.",
       "type": "string"
+    },
+    "Ambiguous": {
+      "type": "string",
+      "enum": [
+        "raise",
+        "earliest",
+        "latest",
+        "null"
+      ]
     },
     "And": {
       "description": "Logical AND against two or more conditions.",
@@ -60,9 +72,42 @@
         "$ref": "#/definitions/ExpressionChain"
       }
     },
+    "AsStruct": {
+      "description": "Combine one or more expressions into a struct column as fields.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ExpressionChain"
+      }
+    },
+    "Cast": {
+      "$ref": "#/definitions/DataType"
+    },
     "Column": {
       "description": "Specify a column by name (equivalent to [`polars::prelude::col`]).",
       "type": "string"
+    },
+    "ConcatStr": {
+      "description": "Concatenate string expressions horizontally.",
+      "type": "object",
+      "required": [
+        "columns",
+        "ignore_nulls",
+        "separator"
+      ],
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExpressionChain"
+          }
+        },
+        "ignore_nulls": {
+          "type": "boolean"
+        },
+        "separator": {
+          "type": "string"
+        }
+      }
     },
     "ConfigSource": {
       "description": "Import another configuration file to be used as a data source.",
@@ -130,6 +175,15 @@
           ]
         }
       }
+    },
+    "DataType": true,
+    "Div": {
+      "description": "Divide the expression by another.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ExpressionChain"
+        }
+      ]
     },
     "Drop": {
       "description": "Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].",
@@ -231,10 +285,81 @@
               "description": "Name of the output file, not including the file extension.",
               "type": "string"
             },
+            "sink": {
+              "description": "Whether to lazily sink data to the CSV. Defaults to true. Set to false if necessary to resolve errors. If set to false, all data will be loaded into memory as a [`polars::prelude::DataFrame`] before being written to disk.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
             "type": {
               "type": "string",
               "enum": [
                 "csv"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Export data to newline-delimited JSON.",
+          "type": "object",
+          "required": [
+            "folder",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "date_format": {
+              "description": "Optional format string to append the current time to the filename - refer to <https://docs.rs/chrono/latest/chrono/format/strftime/index.html> for available format codes.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "folder": {
+              "description": "Folder in which to create files.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the output file, not including the file extension.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "nd_json"
+              ]
+            }
+          }
+        },
+        {
+          "description": "Collect and serialize the dataframe itself to a single JSON object. You probably don't need this.",
+          "type": "object",
+          "required": [
+            "folder",
+            "name",
+            "type"
+          ],
+          "properties": {
+            "date_format": {
+              "description": "Optional format string to append the current time to the filename - refer to <https://docs.rs/chrono/latest/chrono/format/strftime/index.html> for available format codes.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "folder": {
+              "description": "Folder in which to create files.",
+              "type": "string"
+            },
+            "name": {
+              "description": "Name of the output file, not including the file extension.",
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "json"
               ]
             }
           }
@@ -327,6 +452,59 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "description": "Literal null value.",
+          "type": "string",
+          "enum": [
+            "null"
+          ]
+        },
+        {
+          "description": "Evaluates to the number of rows.",
+          "type": "string",
+          "enum": [
+            "len"
+          ]
+        },
+        {
+          "description": "Combine one or more expressions into a struct column as fields.",
+          "type": "object",
+          "required": [
+            "as_struct"
+          ],
+          "properties": {
+            "as_struct": {
+              "$ref": "#/definitions/AsStruct"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Generate a range of integers.",
+          "type": "object",
+          "required": [
+            "int_range"
+          ],
+          "properties": {
+            "int_range": {
+              "$ref": "#/definitions/IntRange"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Concatenate string expressions horizontally.",
+          "type": "object",
+          "required": [
+            "concat_str"
+          ],
+          "properties": {
+            "concat_str": {
+              "$ref": "#/definitions/ConcatStr"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -380,6 +558,28 @@
       ]
     },
     "InlineSource": true,
+    "IntRange": {
+      "description": "Generate a range of integers.",
+      "type": "object",
+      "required": [
+        "dtype",
+        "start",
+        "step"
+      ],
+      "properties": {
+        "dtype": {
+          "$ref": "#/definitions/DataType"
+        },
+        "start": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "step": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
     "IsNull": {
       "description": "Check if values are null.",
       "type": "boolean"
@@ -588,6 +788,20 @@
           "additionalProperties": false
         },
         {
+          "description": "Load data from a .parquet file.",
+          "type": "object",
+          "required": [
+            "parquet"
+          ],
+          "properties": {
+            "parquet": {
+              "$ref": "#/definitions/ParquetSource"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Experimental source for inlining a dataframe, used for mapping columns from one set of values to another via joins. Example: ```toml [source.inline]\n\n[[source.inline.columns]] name     = \"title\" datatype = \"String\" values   = [\"Foo\", \"Bar\", \"Baz\"]\n\n[[source.inline.columns]] name     = \"number\" datatype = \"UInt64\" values   = [1, 2, 3] ```",
           "type": "object",
           "required": [
             "inline"
@@ -636,6 +850,14 @@
           "type": "string"
         }
       }
+    },
+    "Mul": {
+      "description": "Multiply the expression by another.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ExpressionChain"
+        }
+      ]
     },
     "OpItem": {
       "description": "Possible operations that can be applied to an expression (i.e. [`polars::prelude::Expr`]).",
@@ -795,6 +1017,78 @@
             }
           },
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "div"
+          ],
+          "properties": {
+            "div": {
+              "$ref": "#/definitions/Div"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "mul"
+          ],
+          "properties": {
+            "mul": {
+              "$ref": "#/definitions/Mul"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "add"
+          ],
+          "properties": {
+            "add": {
+              "$ref": "#/definitions/Add"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "sub"
+          ],
+          "properties": {
+            "sub": {
+              "$ref": "#/definitions/Sub"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "cast"
+          ],
+          "properties": {
+            "cast": {
+              "$ref": "#/definitions/Cast"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "struct"
+          ],
+          "properties": {
+            "struct": {
+              "$ref": "#/definitions/Struct"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -821,6 +1115,35 @@
         "$ref": "#/definitions/ExpressionChain"
       }
     },
+    "ParquetSource": {
+      "description": "Import another configuration file to be used as a data source.",
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "Path to the configuration file.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/String"
+            }
+          ]
+        },
+        "schema": {
+          "description": "Optional [`polars::prelude::Schema`] to enforce specific datatypes.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Schema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "PlSmallStr": true,
     "Rename": {
       "description": "Rename columns.",
       "oneOf": [
@@ -896,11 +1219,192 @@
           "enum": [
             "to_lowercase"
           ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "to_date"
+          ],
+          "properties": {
+            "to_date": {
+              "$ref": "#/definitions/StrptimeOptions"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "to_date_time"
+          ],
+          "properties": {
+            "to_date_time": {
+              "type": "object",
+              "required": [
+                "ambiguous",
+                "options"
+              ],
+              "properties": {
+                "ambiguous": {
+                  "$ref": "#/definitions/Ambiguous"
+                },
+                "options": {
+                  "$ref": "#/definitions/StrptimeOptions"
+                },
+                "time_unit": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/TimeUnit"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "time_zone": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/PlSmallStr"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "replace_all"
+          ],
+          "properties": {
+            "replace_all": {
+              "type": "object",
+              "required": [
+                "literal",
+                "pat",
+                "value"
+              ],
+              "properties": {
+                "literal": {
+                  "type": "boolean"
+                },
+                "pat": {
+                  "type": "string"
+                },
+                "value": {
+                  "$ref": "#/definitions/ExpressionChain"
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "json_decode"
+          ],
+          "properties": {
+            "json_decode": {
+              "type": "object",
+              "properties": {
+                "dtype": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/DataType"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "infer_schema_len": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint",
+                  "minimum": 0.0
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "zfill"
+          ],
+          "properties": {
+            "zfill": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
     "String": {
       "type": "string"
+    },
+    "StrptimeOptions": {
+      "type": "object",
+      "required": [
+        "cache",
+        "exact",
+        "strict"
+      ],
+      "properties": {
+        "cache": {
+          "description": "use a cache of unique, converted dates to apply the datetime conversion.",
+          "type": "boolean"
+        },
+        "exact": {
+          "description": "If polars may parse matches that not contain the whole string e.g. \"foo-2021-01-01-bar\" could match \"2021-01-01\"",
+          "type": "boolean"
+        },
+        "format": {
+          "description": "Formatting string",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PlSmallStr"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "strict": {
+          "description": "If set then polars will return an error if any date parsing fails",
+          "type": "boolean"
+        }
+      }
+    },
+    "Struct": {
+      "description": "Apply a `struct_`-namespaced operation.",
+      "type": "string",
+      "enum": [
+        "json_encode"
+      ]
+    },
+    "Sub": {
+      "$ref": "#/definitions/ExpressionChain"
+    },
+    "TimeUnit": {
+      "type": "string",
+      "enum": [
+        "Nanoseconds",
+        "Microseconds",
+        "Milliseconds"
+      ]
     },
     "TransformItem": {
       "description": "Available transformations that can be used in configuration files.",
