@@ -40,6 +40,8 @@ pub enum TransformItem {
     Join(Join),
     /// Set a column to a specific value.
     Set(Set),
+    /// Explode a column with list elements.
+    Explode(Explode),
 }
 
 impl Transform for TransformItem {
@@ -55,6 +57,7 @@ impl Transform for TransformItem {
             Self::DropDuplicates(transform) => transform.transform(lf),
             Self::Join(transform) => transform.transform(lf),
             Self::Set(transform) => transform.transform(lf),
+            Self::Explode(transform) => transform.transform(lf),
         }
     }
 }
@@ -290,5 +293,15 @@ pub struct Set(ExpressionChain);
 impl Transform for Set {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.select([col("*"), self.0.expr()?]))
+    }
+}
+
+/// Explode a column with list elements.
+#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+pub struct Explode(Vec<String>);
+
+impl Transform for Explode {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        Ok(lf.explode(self.0.iter()))
     }
 }
