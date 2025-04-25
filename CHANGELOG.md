@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.2.0](https://github.com/oatmealdealer/retl/compare/5e59f2b6091f85796f6a56e1b4547a0c62e36ef6..v0.2.0) - 2025-04-25
+#### Features
+- add drop_null and struct field accessor ops - ([ad0d529](https://github.com/oatmealdealer/retl/commit/ad0d5295a20e54708eb96f3a9165f4c85d6ed8b1)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add explode transform - ([5e59f2b](https://github.com/oatmealdealer/retl/commit/5e59f2b6091f85796f6a56e1b4547a0c62e36ef6)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.1.0](https://github.com/oatmealdealer/retl/compare/bc44c865fadc2eb87e7d4d54fae53991c89dd3fa..v0.1.0) - 2025-03-08
 #### Bug Fixes
 - add None to LazyFrame::sink_csv call - ([78712a2](https://github.com/oatmealdealer/retl/commit/78712a28848ce84fccf71df5788a9841731e77e6)) - [@oatmealdealer](https://github.com/oatmealdealer)
