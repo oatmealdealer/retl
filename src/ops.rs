@@ -33,6 +33,8 @@ pub enum OpItem {
     And(And),
     /// Fill in null values in a column with an expression.
     FillNull(FillNull),
+    /// Remove null values in a column.
+    DropNull(DropNull),
     /// Apply a `str`-namespaced operation.
     Str(Str),
     /// Filter rows that are equal to the given expression.
@@ -62,6 +64,7 @@ impl OpItem {
             Self::Or(op) => op.apply(expr),
             Self::And(op) => op.apply(expr),
             Self::FillNull(op) => op.apply(expr),
+            Self::DropNull(op) => op.apply(expr),
             Self::Str(op) => op.apply(expr),
             Self::Eq(op) => op.apply(expr),
             Self::GtEq(op) => op.apply(expr),
@@ -158,6 +161,16 @@ pub struct FillNull(ExpressionChain);
 impl Op for FillNull {
     fn apply(&self, expr: Expr) -> Result<Expr> {
         Ok(expr.fill_null(self.0.expr()?))
+    }
+}
+
+/// Fill in null values with a given expression.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct DropNull {}
+
+impl Op for DropNull {
+    fn apply(&self, expr: Expr) -> Result<Expr> {
+        Ok(expr.drop_nulls())
     }
 }
 
@@ -340,6 +353,7 @@ impl Op for Cast {
 #[serde(rename_all = "snake_case")]
 pub enum Struct {
     JsonEncode,
+    Field(String),
 }
 
 impl Op for Struct {
@@ -347,6 +361,7 @@ impl Op for Struct {
         let ns = expr.struct_();
         Ok(match self {
             Self::JsonEncode => ns.json_encode(),
+            Self::Field(name) => ns.field_by_name(name),
         })
     }
 }
