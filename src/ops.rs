@@ -164,7 +164,7 @@ impl Op for FillNull {
     }
 }
 
-/// Fill in null values with a given expression.
+/// Drop null values.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct DropNull {}
 
@@ -180,22 +180,27 @@ impl Op for DropNull {
 pub enum Str {
     /// Convert the string column to lowercase.
     ToLowercase,
+    /// Parse the string column as a date.
     ToDate(StrptimeOptions),
+    /// Parse the string column as a datetime.
     ToDateTime {
         time_unit: Option<TimeUnit>,
         time_zone: Option<TimeZone>,
         options: StrptimeOptions,
         ambiguous: Ambiguous,
     },
+    /// Replace all occurrences of the pattern within the string column with the value of a provided expression.
     ReplaceAll {
         pat: String,
         value: ExpressionChain,
         literal: bool,
     },
+    /// Parse a JSON string column into a struct column using the provided schema.
     JsonDecode {
         dtype: Option<DataType>,
         infer_schema_len: Option<usize>,
     },
+    /// Pad a string column with leading zeroes.
     Zfill(u16),
 }
 
@@ -321,6 +326,7 @@ impl Op for Mul {
     }
 }
 
+/// Add the expression and another.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Add(ExpressionChain);
 
@@ -330,6 +336,7 @@ impl Op for Add {
     }
 }
 
+/// Subtract an expression.
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Sub(ExpressionChain);
 
@@ -352,7 +359,9 @@ impl Op for Cast {
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Struct {
+    /// Encode a struct column to JSON.
     JsonEncode,
+    /// Extract a single field by name from a struct column.
     Field(String),
 }
 
