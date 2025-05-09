@@ -5,7 +5,10 @@ use std::{io::Write, path::PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
-use retl::Config;
+use retl::{
+    sources::{Schema, SourceItem},
+    Config,
+};
 use schemars::schema_for;
 use tracing::debug;
 
@@ -35,7 +38,34 @@ fn main() -> Result<()> {
             if let Some(path) = &args.dump_schema {
                 let schema = config.load()?.collect_schema()?.as_ref().clone();
                 let mut writer = std::fs::File::create(path)?;
-                writer.write(toml::to_string_pretty(&schema)?.as_bytes())?;
+                let mut source = config.source.clone();
+                match &mut source.source {
+                    SourceItem::Csv(source) => {
+                        source.schema = Some(Schema(schema));
+                    }
+                    SourceItem::Json(source) => {
+                        source.schema = Some(Schema(schema));
+                    }
+                    SourceItem::JsonLine(source) => {
+                        source.schema = Some(Schema(schema));
+                    }
+                    SourceItem::Parquet(source) => {
+                        source.schema = Some(Schema(schema));
+                    }
+                    _ => {
+                        writer.write(toml::to_string_pretty(&schema)?.as_bytes())?;
+                        writer.flush()?;
+                        return Ok(());
+                    }
+                }
+                writer.write(
+                    toml::to_string_pretty(&Config {
+                        source,
+                        exports: Default::default(),
+                        transforms: Default::default(),
+                    })?
+                    .as_bytes(),
+                )?;
                 writer.flush()?;
                 Ok(())
             } else {

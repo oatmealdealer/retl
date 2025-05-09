@@ -16,7 +16,7 @@ pub trait Expression: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 }
 
 /// Available expressions that can be used in configuration files.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExpressionItem {
     /// Specify a column by name (equivalent to [`col`]).
@@ -59,7 +59,7 @@ impl Expression for ExpressionItem {
 }
 
 /// An expression grouped together with chained operations.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ExpressionChain {
     expr: ExpressionItem,
     #[serde(default)]
@@ -75,7 +75,7 @@ impl Expression for ExpressionChain {
 }
 
 /// Specify a column by name (equivalent to [`polars::prelude::col`]).
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
 pub struct Column(String);
 
 impl Expression for Column {
@@ -85,7 +85,7 @@ impl Expression for Column {
 }
 
 /// Match a column against a regex.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Match {
     /// Column to apply pattern to.
     pub column: String,
@@ -104,7 +104,7 @@ impl Expression for Match {
 type Conditions = Vec<ExpressionItem>;
 
 /// Logical AND against two or more conditions.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
 pub struct And {
     /// Conditions to combine.
@@ -139,7 +139,7 @@ impl Expression for And {
 }
 
 /// Logical OR against two or more conditions.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "Conditions")]
 pub struct Or {
     /// Conditions to combine.
@@ -174,7 +174,7 @@ impl Expression for Or {
 }
 
 /// Specify a literal value (equivalent to [`polars::prelude::lit`]).
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash, JsonSchema)]
 pub struct Literal(String);
 
 impl Expression for Literal {
@@ -184,7 +184,7 @@ impl Expression for Literal {
 }
 
 /// Combine one or more expressions into a struct column as fields.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct AsStruct(Vec<ExpressionChain>);
 
 impl Expression for AsStruct {
@@ -199,7 +199,7 @@ impl Expression for AsStruct {
 }
 
 /// Generate a range of integers.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct IntRange {
     start: i64,
     // end:
@@ -219,7 +219,7 @@ impl Expression for IntRange {
 }
 
 /// Concatenate string expressions horizontally.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ConcatStr {
     columns: Vec<ExpressionChain>,
     separator: String,

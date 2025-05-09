@@ -17,7 +17,7 @@ pub trait Transform: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 }
 
 /// Available transformations that can be used in configuration files.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TransformItem {
     /// Select columns (equivalent to [`LazyFrame::select`])
@@ -63,7 +63,7 @@ impl Transform for TransformItem {
 }
 
 /// Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Select(Vec<ExpressionChain>);
 
 impl Transform for Select {
@@ -79,7 +79,7 @@ impl Transform for Select {
 }
 
 /// Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Drop(Vec<ExpressionChain>);
 
 impl Transform for Drop {
@@ -94,7 +94,7 @@ impl Transform for Drop {
 }
 
 /// Rename columns.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Rename {
     /// Rename using a direct mapping of old names to new.
@@ -119,7 +119,7 @@ impl Transform for Rename {
 }
 
 /// Filter rows that match the given expressions, which must yield boolean values.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Filter(Vec<ExpressionChain>);
 
 impl Transform for Filter {
@@ -134,7 +134,7 @@ impl Transform for Filter {
 }
 
 /// Extract capture groups from a regex into separate columns.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Extract {
     #[serde(flatten)]
     matcher: Match,
@@ -165,7 +165,7 @@ impl Transform for Extract {
 }
 
 /// Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Unnest(Vec<String>);
 
 impl Transform for Unnest {
@@ -175,7 +175,7 @@ impl Transform for Unnest {
 }
 
 /// Sort a column ascending or descending.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Sort {
     column: String,
     #[serde(default)]
@@ -183,7 +183,7 @@ pub struct Sort {
 }
 
 /// Sort the data by one or more columns.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct SortBy(Vec<Sort>);
 
 impl Transform for SortBy {
@@ -200,7 +200,7 @@ impl Transform for SortBy {
 }
 
 /// Which duplicate rows to keep to keep when dropping duplicates from data.
-#[derive(Deserialize, Serialize, Debug, Default, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DuplicateKeep {
     /// Keep the first duplicate record.
@@ -226,7 +226,7 @@ impl From<&DuplicateKeep> for UniqueKeepStrategy {
 }
 
 /// Filter out duplicate rows.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct DropDuplicates {
     /// Columns to check for duplicate values (defaults to all columns).
     pub subset: Option<Vec<String>>,
@@ -242,7 +242,7 @@ impl Transform for DropDuplicates {
 }
 
 /// The method by which to join datasets. Maps to [`polars::prelude::JoinType`].
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum JoinType {
     /// Inner join - keep only rows that match on both sides.
@@ -256,7 +256,7 @@ pub enum JoinType {
 }
 
 /// Transform data by joining it with data from another source.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Join {
     /// The right-hand dataset to join the input with.
     pub right: Box<Loader>,
@@ -287,7 +287,7 @@ impl Transform for Join {
 }
 
 /// Add a column with the given expression.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Set(ExpressionChain);
 
 impl Transform for Set {
@@ -297,7 +297,7 @@ impl Transform for Set {
 }
 
 /// Explode a column with list elements.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Explode(Vec<String>);
 
 impl Transform for Explode {

@@ -18,7 +18,7 @@ pub trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 }
 
 /// Available sources that can be used in configuration files.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SourceItem {
     /// Load data from CSV.
@@ -63,7 +63,7 @@ impl Source for SourceItem {
 }
 
 /// Load data from a given source and apply optional transformations.
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Loader {
     /// The source to load data from.
     #[serde(flatten)]
@@ -84,7 +84,7 @@ impl Loader {
 }
 
 /// A valid ASCII CSV separator, represented internally as a [`u8`].
-#[derive(Deserialize, Serialize, Debug, JsonSchema)]
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(try_from = "char")]
 pub struct Separator(u8);
 
@@ -99,8 +99,8 @@ impl TryFrom<char> for Separator {
 /// A polars Schema mapping columns to data types -
 /// currently too difficult to provide a schema for, so you're on your own here.
 /// Refer to [`polars::prelude::DataType`] and good luck!
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Schema(polars::prelude::Schema);
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct Schema(pub polars::prelude::Schema);
 
 impl JsonSchema for Schema {
     fn schema_name() -> String {
@@ -112,7 +112,7 @@ impl JsonSchema for Schema {
 }
 
 /// Load data from CSV.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct CsvSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyCsvReader`], so paths with globs are permissible
@@ -141,7 +141,7 @@ impl Source for CsvSource {
 }
 
 /// Load data from newline-delimited JSON files.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct JsonLineSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible
@@ -160,7 +160,7 @@ impl Source for JsonLineSource {
 }
 
 /// Load data from a JSON file.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct JsonSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible
@@ -182,7 +182,7 @@ impl Source for JsonSource {
 }
 
 /// Import another configuration file to be used as a data source.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ConfigSource {
     /// Path to the configuration file.
     pub path: CanonicalPath,
@@ -195,7 +195,7 @@ impl Source for ConfigSource {
 }
 
 /// Import another configuration file to be used as a data source.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ParquetSource {
     /// Path to the configuration file.
     pub path: CanonicalPath,
@@ -234,7 +234,7 @@ impl Source for ParquetSource {
 ///     datatype = "UInt64"
 ///     values   = [1, 2, 3]
 /// ```
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct InlineSource(DataFrame);
 
 impl Source for InlineSource {

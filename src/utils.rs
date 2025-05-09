@@ -10,7 +10,7 @@ use std::{
 };
 
 /// Errors that can be encountered during configuration parsing.
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
     /// Returned when attempting to run a configuration does not contain any exports.
     #[error("must define at least one export")]
@@ -40,7 +40,7 @@ where
 }
 
 /// One or more paths that are canonicalized (see [`std::fs::canonicalize`]) and guaranteed to exist.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPaths(Arc<Vec<PathBuf>>);
 
@@ -73,7 +73,7 @@ impl Deref for CanonicalPaths {
 }
 
 /// A single path that is canonicalized (see [`std::fs::canonicalize`]) and guaranteed to exist.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(try_from = "PathBuf")]
 pub struct CanonicalPath(PathBuf);
 
@@ -107,7 +107,7 @@ impl AsRef<Path> for CanonicalPath {
 }
 
 /// Wraps [`polars::prelude::DataType`].
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DataType(polars::prelude::DataType);
 
 impl JsonSchema for DataType {

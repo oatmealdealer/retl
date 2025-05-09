@@ -16,7 +16,7 @@ pub trait Op: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 }
 
 /// Possible operations that can be applied to an expression (i.e. [`polars::prelude::Expr`]).
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OpItem {
     /// Extract the capture groups of a regex from the given column.
@@ -81,7 +81,7 @@ impl OpItem {
 }
 
 /// Extract the capture groups of a regex from the given column.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ExtractGroups(String);
 
 impl Op for ExtractGroups {
@@ -91,7 +91,7 @@ impl Op for ExtractGroups {
 }
 
 /// Name a column using the given alias.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Alias(String);
 
 impl Op for Alias {
@@ -101,7 +101,7 @@ impl Op for Alias {
 }
 
 /// Check if values contain the given regex.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Contains(String);
 
 impl Op for Contains {
@@ -111,7 +111,7 @@ impl Op for Contains {
 }
 
 /// Check if values are null.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct IsNull(bool);
 
 impl Op for IsNull {
@@ -125,7 +125,7 @@ impl Op for IsNull {
 }
 
 /// Chain an expression into a logical OR with conditions on one or more columns.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Or(Vec<ExpressionChain>);
 
 impl Op for Or {
@@ -140,7 +140,7 @@ impl Op for Or {
 }
 
 /// Chain an expression into a logical AND with conditions on one or more columns.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct And(Vec<ExpressionChain>);
 
 impl Op for And {
@@ -155,7 +155,7 @@ impl Op for And {
 }
 
 /// Fill in null values with a given expression.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct FillNull(ExpressionChain);
 
 impl Op for FillNull {
@@ -165,7 +165,7 @@ impl Op for FillNull {
 }
 
 /// Drop null values.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct DropNull {}
 
 impl Op for DropNull {
@@ -175,7 +175,7 @@ impl Op for DropNull {
 }
 
 /// Apply a `str`-namespaced operation.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Str {
     /// Convert the string column to lowercase.
@@ -204,7 +204,7 @@ pub enum Str {
     Zfill(u16),
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Ambiguous {
     #[default]
@@ -260,7 +260,7 @@ impl Op for Str {
 }
 
 /// Filter rows that are equal to the given expression.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Eq(ExpressionChain);
 
 impl Op for Eq {
@@ -270,7 +270,7 @@ impl Op for Eq {
 }
 
 /// Filter rows that are greater than or equal to the given expression.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct GtEq(ExpressionChain);
 
 impl Op for GtEq {
@@ -280,7 +280,7 @@ impl Op for GtEq {
 }
 
 /// Filter rows that are less than or equal to the given expression.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct LtEq(ExpressionChain);
 
 impl Op for LtEq {
@@ -290,7 +290,7 @@ impl Op for LtEq {
 }
 
 /// Apply a `list`-namespaced operation.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum List {
     /// Join a list column with a string separator.
@@ -307,7 +307,7 @@ impl Op for List {
 }
 
 /// Divide the expression by another.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Div(ExpressionChain);
 
 impl Op for Div {
@@ -317,7 +317,7 @@ impl Op for Div {
 }
 
 /// Multiply the expression by another.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Mul(ExpressionChain);
 
 impl Op for Mul {
@@ -327,7 +327,7 @@ impl Op for Mul {
 }
 
 /// Add the expression and another.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Add(ExpressionChain);
 
 impl Op for Add {
@@ -337,7 +337,7 @@ impl Op for Add {
 }
 
 /// Subtract an expression.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Sub(ExpressionChain);
 
 impl Op for Sub {
@@ -346,7 +346,7 @@ impl Op for Sub {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Cast(DataType);
 
 impl Op for Cast {
@@ -356,7 +356,7 @@ impl Op for Cast {
 }
 
 /// Apply a `struct_`-namespaced operation.
-#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Struct {
     /// Encode a struct column to JSON.
