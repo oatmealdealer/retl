@@ -42,6 +42,8 @@ pub enum TransformItem {
     Set(Set),
     /// Explode a column with list elements.
     Explode(Explode),
+    /// Select additional columns.
+    WithColumns(WithColumns),
 }
 
 impl Transform for TransformItem {
@@ -58,6 +60,7 @@ impl Transform for TransformItem {
             Self::Join(transform) => transform.transform(lf),
             Self::Set(transform) => transform.transform(lf),
             Self::Explode(transform) => transform.transform(lf),
+            Self::WithColumns(transform) => transform.transform(lf),
         }
     }
 }
@@ -293,6 +296,22 @@ pub struct Set(ExpressionChain);
 impl Transform for Set {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.select([col("*"), self.0.expr()?]))
+    }
+}
+
+/// Select additional columns.
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
+pub struct WithColumns(Vec<ExpressionChain>);
+
+impl Transform for WithColumns {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        Ok(lf.with_columns(
+            self.0
+                .iter()
+                .map(<_>::expr)
+                .collect::<Result<Vec<Expr>, _>>()?
+                .as_slice(),
+        ))
     }
 }
 
