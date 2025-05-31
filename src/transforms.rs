@@ -265,7 +265,7 @@ pub enum JoinType {
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Join {
     /// The right-hand dataset to join the input with.
-    pub right: Box<Loader>,
+    pub right: Loader,
     /// The column in the left-hand dataset to join on.
     pub left_on: String,
     /// The column in the right-hand dataset to join on.
