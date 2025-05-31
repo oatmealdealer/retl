@@ -27,6 +27,8 @@ pub enum ExpressionItem {
     And(And),
     /// Group 2+ items together in a logical OR statement.
     Or(Or),
+    /// Logically invert the given expression.
+    Not(Box<ExpressionChain>),
     /// Specify a literal string value (equivalent to [`lit`]).
     Lit(Literal),
     /// Literal null value.
@@ -51,6 +53,7 @@ impl Expression for ExpressionItem {
             Self::Lit(expr) => expr.expr(),
             Self::Null => Ok(NULL.lit()),
             Self::Len => Ok(len()),
+            Self::Not(expr) => Ok(expr.expr()?.not()),
             Self::AsStruct(expr) => expr.expr(),
             Self::IntRange(expr) => expr.expr(),
             Self::ConcatStr(expr) => expr.expr(),
