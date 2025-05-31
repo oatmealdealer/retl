@@ -178,6 +178,7 @@ impl Op for DropNull {
 #[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Str {
+    Len,
     StripChars(ExpressionChain),
     /// Convert the string column to lowercase.
     ToLowercase,
@@ -230,6 +231,7 @@ impl Op for Str {
     fn apply(&self, expr: Expr) -> Result<Expr> {
         let ns = expr.str();
         Ok(match self {
+            Self::Len => ns.len_chars(),
             Self::StripChars(expr) => ns.strip_chars(expr.expr()?),
             Self::ToLowercase => ns.to_lowercase(),
             Self::ToDate(options) => ns.to_date(options.clone()),
