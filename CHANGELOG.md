@@ -2,6 +2,20 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.3.0](https://github.com/oatmealdealer/retl/compare/4b58e610319e4a653001f9c6bce662b3895a40ae..v0.3.0) - 2025-05-31
+#### Features
+- add gt and lt ops - ([6a57482](https://github.com/oatmealdealer/retl/commit/6a5748263e8b1b9b71b05e7085a789aebe3b0a9d)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add len string operation - ([8f50cb4](https://github.com/oatmealdealer/retl/commit/8f50cb4f6565d65e3f547ba97d01aa41fae26ef1)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add strip_chars string operation - ([ac8f688](https://github.com/oatmealdealer/retl/commit/ac8f688331c5c426a252ebf9826b06d061583cd1)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add collect transform - ([2f3d535](https://github.com/oatmealdealer/retl/commit/2f3d535708ee946b01d58c202c369596ecfe9a0a)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add with_columns transform - ([1b9005f](https://github.com/oatmealdealer/retl/commit/1b9005fad2b68c9d4e58f975a7c7a8e734a3ea61)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add Clone to datatypes; dump config schema as config - ([8e32973](https://github.com/oatmealdealer/retl/commit/8e32973839f325afa969732c42334dc6579b1be1)) - [@oatmealdealer](https://github.com/oatmealdealer)
+#### Miscellaneous Chores
+- remove unnecessary Box wrapping Loader - ([d91300e](https://github.com/oatmealdealer/retl/commit/d91300e79f7840940a9004f4d6118b402113ddd3)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- fill in some missing docs - ([4b58e61](https://github.com/oatmealdealer/retl/commit/4b58e610319e4a653001f9c6bce662b3895a40ae)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.2.0](https://github.com/oatmealdealer/retl/compare/5e59f2b6091f85796f6a56e1b4547a0c62e36ef6..v0.2.0) - 2025-04-25
 #### Features
 - add drop_null and struct field accessor ops - ([ad0d529](https://github.com/oatmealdealer/retl/commit/ad0d5295a20e54708eb96f3a9165f4c85d6ed8b1)) - [@oatmealdealer](https://github.com/oatmealdealer)
