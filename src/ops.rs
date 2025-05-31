@@ -39,6 +39,10 @@ pub enum OpItem {
     Str(Str),
     /// Filter rows that are equal to the given expression.
     Eq(Eq),
+    /// Filter rows that are greater than the given expression.
+    Gt(ExpressionChain),
+    /// Filter rows that are less than the given expression.
+    Lt(ExpressionChain),
     /// Filter rows that are greater than or equal to the given expression.
     GtEq(GtEq),
     /// Filter rows that are less than or equal to the given expression.
@@ -67,6 +71,8 @@ impl OpItem {
             Self::DropNull(op) => op.apply(expr),
             Self::Str(op) => op.apply(expr),
             Self::Eq(op) => op.apply(expr),
+            Self::Gt(gt) => Ok(expr.gt(gt.expr()?)),
+            Self::Lt(lt) => Ok(expr.lt(lt.expr()?)),
             Self::GtEq(op) => op.apply(expr),
             Self::LtEq(op) => op.apply(expr),
             Self::List(op) => op.apply(expr),
