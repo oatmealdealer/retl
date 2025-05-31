@@ -44,6 +44,8 @@ pub enum TransformItem {
     Explode(Explode),
     /// Select additional columns.
     WithColumns(WithColumns),
+    /// Run the pipeline up to the current point, collecting the result in memory.
+    Collect(Collect),
 }
 
 impl Transform for TransformItem {
@@ -61,6 +63,7 @@ impl Transform for TransformItem {
             Self::Set(transform) => transform.transform(lf),
             Self::Explode(transform) => transform.transform(lf),
             Self::WithColumns(transform) => transform.transform(lf),
+            Self::Collect(transform) => transform.transform(lf),
         }
     }
 }
@@ -322,5 +325,15 @@ pub struct Explode(Vec<String>);
 impl Transform for Explode {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.explode(self.0.iter()))
+    }
+}
+
+/// Run the pipeline up to the current point and collect the result in memory.
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
+pub struct Collect {}
+
+impl Transform for Collect {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        Ok(lf.collect()?.lazy())
     }
 }
