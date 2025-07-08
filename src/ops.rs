@@ -308,6 +308,10 @@ impl Op for LtEq {
 pub enum List {
     /// Join a list column with a string separator.
     Join(ExpressionChain),
+    /// Filter elements of a list column based on the given expression predicate.
+    Filter(ExpressionChain),
+    /// Return the first element of the list.
+    First,
 }
 
 impl Op for List {
@@ -315,6 +319,8 @@ impl Op for List {
         let ns = expr.list();
         Ok(match self {
             Self::Join(chain) => ns.join(chain.expr()?, true),
+            Self::Filter(chain) => ns.eval(Expr::Column(PlSmallStr::EMPTY).filter(chain.expr()?)),
+            Self::First => ns.first(),
         })
     }
 }
