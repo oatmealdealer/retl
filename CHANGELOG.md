@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.4.0](https://github.com/oatmealdealer/retl/compare/7a3bfc23f0bc201316cccc3a92d92c486526e8f1..v0.4.0) - 2025-07-08
+#### Features
+- add `filter` and `first` list ops - ([3942317](https://github.com/oatmealdealer/retl/commit/39423173d60ea7b6c7f33ba31c2ec5d188c5bd76)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- upgrade to latest polars - ([0e62b28](https://github.com/oatmealdealer/retl/commit/0e62b28e1cf62eb8fb40d4e9651f23e0b083e146)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add neq op - ([f9c6ac8](https://github.com/oatmealdealer/retl/commit/f9c6ac80ee81cf7823b191774ff7978f21162ded)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add "not" expression - ([7a3bfc2](https://github.com/oatmealdealer/retl/commit/7a3bfc23f0bc201316cccc3a92d92c486526e8f1)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.3.0](https://github.com/oatmealdealer/retl/compare/4b58e610319e4a653001f9c6bce662b3895a40ae..v0.3.0) - 2025-05-31
 #### Features
 - add gt and lt ops - ([6a57482](https://github.com/oatmealdealer/retl/commit/6a5748263e8b1b9b71b05e7085a789aebe3b0a9d)) - [@oatmealdealer](https://github.com/oatmealdealer)
