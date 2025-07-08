@@ -86,16 +86,11 @@ impl Transform for Select {
 
 /// Select a series of expressions with applied operations. Wraps [`polars::lazy::prelude::LazyFrame::select`].
 #[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Drop(Vec<ExpressionChain>);
+pub struct Drop(Selector);
 
 impl Transform for Drop {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
-        Ok(lf.drop(
-            self.0
-                .iter()
-                .map(<_>::expr)
-                .collect::<Result<Vec<Expr>, _>>()?,
-        ))
+        Ok(lf.drop(self.0.clone()))
     }
 }
 
@@ -164,7 +159,10 @@ impl Transform for Extract {
                     .extract_groups(self.matcher.pattern.as_str())?
                     .alias(alias.as_str()),
             ])
-            .unnest(vec![alias]);
+            .unnest(Selector::ByName {
+                names: Arc::new([alias.into()]),
+                strict: true,
+            });
 
         Ok(lf)
     }
@@ -172,11 +170,11 @@ impl Transform for Extract {
 
 /// Apply [`polars::lazy::prelude::LazyFrame::unnest`] to the given struct columns.
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
-pub struct Unnest(Vec<String>);
+pub struct Unnest(Selector);
 
 impl Transform for Unnest {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
-        Ok(lf.unnest(&self.0))
+        Ok(lf.unnest(self.0.clone()))
     }
 }
 
@@ -235,7 +233,7 @@ impl From<&DuplicateKeep> for UniqueKeepStrategy {
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct DropDuplicates {
     /// Columns to check for duplicate values (defaults to all columns).
-    pub subset: Option<Vec<String>>,
+    pub subset: Option<Selector>,
     /// Which duplicate record (if any) to keep.
     #[serde(default)]
     pub keep: DuplicateKeep,
@@ -320,11 +318,11 @@ impl Transform for WithColumns {
 
 /// Explode a column with list elements.
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
-pub struct Explode(Vec<String>);
+pub struct Explode(Selector);
 
 impl Transform for Explode {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
-        Ok(lf.explode(self.0.iter()))
+        Ok(lf.explode(self.0.clone()))
     }
 }
 

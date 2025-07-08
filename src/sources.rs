@@ -3,10 +3,15 @@
 use crate::{
     config::Config,
     transforms::{Transform, TransformItem},
-    utils::{CanonicalPath, CanonicalPaths},
+    utils::CanonicalPath,
 };
 use anyhow::Result;
-use polars::{frame::DataFrame, io::SerReader, lazy::prelude::*, prelude::JsonReader};
+use polars::{
+    frame::DataFrame,
+    io::SerReader,
+    lazy::prelude::*,
+    prelude::{JsonReader, PlPath},
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{fmt::Debug, sync::Arc};
@@ -117,7 +122,7 @@ pub struct CsvSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyCsvReader`], so paths with globs are permissible
     /// (e.g. `./files/*.csv`).
-    pub path: CanonicalPaths,
+    pub paths: Arc<[PlPath]>,
     /// Separator to use when parsing.
     pub separator: Option<Separator>,
     /// Whether or not files have headers.
@@ -128,7 +133,7 @@ pub struct CsvSource {
 
 impl Source for CsvSource {
     fn load(&self) -> Result<LazyFrame> {
-        let mut reader = LazyCsvReader::new_paths(self.path.clone().as_slice().into());
+        let mut reader = LazyCsvReader::new_paths(self.paths.clone());
         reader = reader.with_has_header(self.has_header.as_ref().unwrap_or(&true).to_owned());
         if self.separator.is_some() {
             reader = reader.with_separator(self.separator.as_ref().unwrap().0)
@@ -146,14 +151,14 @@ pub struct JsonLineSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible
     /// (e.g. `./files/*.csv`).
-    pub path: CanonicalPaths,
+    pub paths: Arc<[PlPath]>,
     /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
     pub schema: Option<Schema>,
 }
 
 impl Source for JsonLineSource {
     fn load(&self) -> Result<LazyFrame> {
-        let mut reader = LazyJsonLineReader::new_paths(self.path.clone().as_slice().into());
+        let mut reader = LazyJsonLineReader::new_paths(self.paths.clone());
         reader = reader.with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
     }
@@ -198,15 +203,15 @@ impl Source for ConfigSource {
 #[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
 pub struct ParquetSource {
     /// Path to the configuration file.
-    pub path: CanonicalPath,
+    pub paths: Arc<[PlPath]>,
     /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
     pub schema: Option<Schema>,
 }
 
 impl Source for ParquetSource {
     fn load(&self) -> Result<LazyFrame> {
-        Ok(LazyFrame::scan_parquet(
-            &self.path,
+        Ok(LazyFrame::scan_parquet_files(
+            self.paths.clone(),
             ScanArgsParquet {
                 schema: self
                     .schema

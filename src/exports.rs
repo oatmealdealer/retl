@@ -1,7 +1,11 @@
 //! Available methods for exporting data.
 
 use anyhow::Result;
-use polars::{io::SerWriter, lazy::prelude::*, prelude::CsvWriter};
+use polars::{
+    io::SerWriter,
+    lazy::prelude::*,
+    prelude::{CsvWriter, PlPath},
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -68,12 +72,13 @@ impl Export for CsvExport {
         }
         filename.write_str(".csv")?;
         if self.sink.unwrap_or(true) {
-            lf.sink_csv(
-                self.folder.join(filename),
+            let _ = lf.sink_csv(
+                SinkTarget::Path(PlPath::Local(self.folder.join(filename).into())),
                 CsvWriterOptions {
                     ..Default::default()
                 },
                 None,
+                Default::default(),
             )?;
         } else {
             let mut file = std::fs::File::create(self.folder.join(filename))?;
@@ -112,10 +117,11 @@ impl Export for NdJsonExport {
             )?
         }
         filename.write_str(".jsonl")?;
-        lf.sink_json(
-            self.folder.join(filename),
+        let _ = lf.sink_json(
+            SinkTarget::Path(PlPath::Local(self.folder.join(filename).into())),
             JsonWriterOptions::default(),
             None,
+            Default::default(),
         )?;
         Ok(())
     }
