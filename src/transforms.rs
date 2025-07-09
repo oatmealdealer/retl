@@ -46,6 +46,8 @@ pub enum TransformItem {
     WithColumns(WithColumns),
     /// Run the pipeline up to the current point, collecting the result in memory.
     Collect(Collect),
+    /// Run one or more aggregations on the given expressions.
+    GroupBy(GroupBy),
 }
 
 impl Transform for TransformItem {
@@ -64,6 +66,7 @@ impl Transform for TransformItem {
             Self::Explode(transform) => transform.transform(lf),
             Self::WithColumns(transform) => transform.transform(lf),
             Self::Collect(transform) => transform.transform(lf),
+            Self::GroupBy(transform) => transform.transform(lf),
         }
     }
 }
@@ -257,6 +260,8 @@ pub enum JoinType {
     Right,
     /// Full join - keep all rows from both datasets.
     Full,
+    /// Anti join - keep only rows without a match.
+    Anti,
 }
 
 /// Transform data by joining it with data from another source.
@@ -264,10 +269,10 @@ pub enum JoinType {
 pub struct Join {
     /// The right-hand dataset to join the input with.
     pub right: Loader,
-    /// The column in the left-hand dataset to join on.
-    pub left_on: String,
-    /// The column in the right-hand dataset to join on.
-    pub right_on: String,
+    /// The expressions in the left-hand dataset to join on.
+    pub left_on: Vec<ExpressionChain>,
+    /// The expressions in the right-hand dataset to join on.
+    pub right_on: Vec<ExpressionChain>,
     /// Join method to use.
     pub how: JoinType,
 }
@@ -277,13 +282,22 @@ impl Transform for Join {
         let lf2 = self.right.load()?;
         Ok(lf1.join(
             lf2,
-            [col(&self.left_on)],
-            [col(&self.right_on)],
+            self.left_on
+                .iter()
+                .map(|e| e.expr())
+                .collect::<Result<Vec<Expr>>>()?
+                .as_slice(),
+            self.right_on
+                .iter()
+                .map(|e| e.expr())
+                .collect::<Result<Vec<Expr>>>()?
+                .as_slice(),
             JoinArgs::new(match self.how {
                 JoinType::Inner => polars::prelude::JoinType::Inner,
                 JoinType::Left => polars::prelude::JoinType::Left,
                 JoinType::Right => polars::prelude::JoinType::Right,
                 JoinType::Full => polars::prelude::JoinType::Full,
+                JoinType::Anti => polars::prelude::JoinType::Anti,
             })
             .with_coalesce(JoinCoalesce::CoalesceColumns),
         ))
@@ -333,5 +347,32 @@ pub struct Collect {}
 impl Transform for Collect {
     fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
         Ok(lf.collect()?.lazy())
+    }
+}
+
+/// Run one or more aggregations on the given expressions.
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
+pub struct GroupBy {
+    exprs: Vec<ExpressionChain>,
+    agg: Vec<ExpressionChain>,
+}
+
+impl Transform for GroupBy {
+    fn transform(&self, lf: LazyFrame) -> Result<LazyFrame> {
+        Ok(lf
+            .group_by(
+                self.exprs
+                    .iter()
+                    .map(|e| e.expr())
+                    .collect::<Result<Vec<Expr>>>()?
+                    .as_slice(),
+            )
+            .agg(
+                self.agg
+                    .iter()
+                    .map(|e| e.expr())
+                    .collect::<Result<Vec<Expr>>>()?
+                    .as_slice(),
+            ))
     }
 }
