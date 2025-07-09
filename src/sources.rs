@@ -146,7 +146,7 @@ impl Source for CsvSource {
         }
         reader = reader
             .with_truncate_ragged_lines(true)
-            .with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
+            .with_dtype_overwrite(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
     }
 }
@@ -171,7 +171,7 @@ impl Source for JsonLineSource {
             .collect::<Vec<PlPath>>()
             .into();
         let mut reader = LazyJsonLineReader::new_paths(paths);
-        reader = reader.with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
+        reader = reader.with_schema_overwrite(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
     }
 }
