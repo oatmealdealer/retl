@@ -43,6 +43,8 @@ pub enum ExpressionItem {
     ConcatStr(ConcatStr),
     /// Use to reference the current element in a list eval expression. Equivalent to `col("")`.
     Element,
+    /// Create a when/then/otherwise expression.
+    Condition(Condition),
 }
 
 impl Expression for ExpressionItem {
@@ -60,6 +62,7 @@ impl Expression for ExpressionItem {
             Self::IntRange(expr) => expr.expr(),
             Self::ConcatStr(expr) => expr.expr(),
             Self::Element => Ok(col("")),
+            Self::Condition(expr) => expr.expr(),
         }
     }
 }
@@ -243,5 +246,21 @@ impl Expression for ConcatStr {
             self.separator.as_str(),
             self.ignore_nulls,
         ))
+    }
+}
+
+/// Create a when/then/otherwise expression.
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Condition {
+    when: Box<ExpressionChain>,
+    then: Box<ExpressionChain>,
+    otherwise: Box<ExpressionChain>,
+}
+
+impl Expression for Condition {
+    fn expr(&self) -> Result<Expr> {
+        Ok(when(self.when.expr()?)
+            .then(self.then.expr()?)
+            .otherwise(self.otherwise.expr()?))
     }
 }
