@@ -72,14 +72,15 @@ impl Export for CsvExport {
         }
         filename.write_str(".csv")?;
         if self.sink.unwrap_or(true) {
-            let _ = lf.sink_csv(
+            lf.sink_csv(
                 SinkTarget::Path(PlPath::Local(self.folder.join(filename).into())),
                 CsvWriterOptions {
                     ..Default::default()
                 },
                 None,
                 Default::default(),
-            )?;
+            )?
+            .collect()?;
         } else {
             let mut file = std::fs::File::create(self.folder.join(filename))?;
             CsvWriter::new(&mut file)
@@ -117,12 +118,13 @@ impl Export for NdJsonExport {
             )?
         }
         filename.write_str(".jsonl")?;
-        let _ = lf.sink_json(
+        lf.sink_json(
             SinkTarget::Path(PlPath::Local(self.folder.join(filename).into())),
             JsonWriterOptions::default(),
             None,
             Default::default(),
-        )?;
+        )?
+        .collect()?;
         Ok(())
     }
 }
