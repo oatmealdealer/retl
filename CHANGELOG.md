@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.3](https://github.com/oatmealdealer/retl/compare/5579c5fa0ba7e98907e0b7e38b2e163046978c2e..v0.5.3) - 2025-07-09
+#### Bug Fixes
+- use overwrites for setting source schemas - ([5579c5f](https://github.com/oatmealdealer/retl/commit/5579c5fa0ba7e98907e0b7e38b2e163046978c2e)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.5.2](https://github.com/oatmealdealer/retl/compare/9eb8214ca2f85d0c58949be38fad95a62d27714e..v0.5.2) - 2025-07-09
 #### Bug Fixes
 - broken sinks after polars upgrade - ([9eb8214](https://github.com/oatmealdealer/retl/commit/9eb8214ca2f85d0c58949be38fad95a62d27714e)) - [@oatmealdealer](https://github.com/oatmealdealer)
