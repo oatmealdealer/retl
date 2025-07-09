@@ -41,6 +41,8 @@ pub enum ExpressionItem {
     IntRange(IntRange),
     /// Concatenate string expressions horizontally.
     ConcatStr(ConcatStr),
+    /// Use to reference the current element in a list eval expression. Equivalent to `col("")`.
+    Element,
 }
 
 impl Expression for ExpressionItem {
@@ -57,6 +59,7 @@ impl Expression for ExpressionItem {
             Self::AsStruct(expr) => expr.expr(),
             Self::IntRange(expr) => expr.expr(),
             Self::ConcatStr(expr) => expr.expr(),
+            Self::Element => Ok(col("")),
         }
     }
 }
