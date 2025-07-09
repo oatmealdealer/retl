@@ -3,7 +3,7 @@
 use crate::{
     config::Config,
     transforms::{Transform, TransformItem},
-    utils::CanonicalPath,
+    utils::{CanonicalPath, CanonicalPaths},
 };
 use anyhow::Result;
 use polars::{
@@ -122,7 +122,7 @@ pub struct CsvSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyCsvReader`], so paths with globs are permissible
     /// (e.g. `./files/*.csv`).
-    pub paths: Arc<[PlPath]>,
+    pub path: CanonicalPaths,
     /// Separator to use when parsing.
     pub separator: Option<Separator>,
     /// Whether or not files have headers.
@@ -133,7 +133,13 @@ pub struct CsvSource {
 
 impl Source for CsvSource {
     fn load(&self) -> Result<LazyFrame> {
-        let mut reader = LazyCsvReader::new_paths(self.paths.clone());
+        let paths: Arc<[PlPath]> = self
+            .path
+            .iter()
+            .map(|path_buf| PlPath::Local(path_buf.clone().into()))
+            .collect::<Vec<PlPath>>()
+            .into();
+        let mut reader = LazyCsvReader::new_paths(paths);
         reader = reader.with_has_header(self.has_header.as_ref().unwrap_or(&true).to_owned());
         if self.separator.is_some() {
             reader = reader.with_separator(self.separator.as_ref().unwrap().0)
@@ -151,14 +157,20 @@ pub struct JsonLineSource {
     /// The path to load files from.
     /// This path is passed directly to [`LazyJsonLineReader`], so paths with globs are permissible
     /// (e.g. `./files/*.csv`).
-    pub paths: Arc<[PlPath]>,
+    pub path: CanonicalPaths,
     /// Optional [`polars::prelude::Schema`] to enforce specific datatypes.
     pub schema: Option<Schema>,
 }
 
 impl Source for JsonLineSource {
     fn load(&self) -> Result<LazyFrame> {
-        let mut reader = LazyJsonLineReader::new_paths(self.paths.clone());
+        let paths: Arc<[PlPath]> = self
+            .path
+            .iter()
+            .map(|path_buf| PlPath::Local(path_buf.clone().into()))
+            .collect::<Vec<PlPath>>()
+            .into();
+        let mut reader = LazyJsonLineReader::new_paths(paths);
         reader = reader.with_schema(self.schema.as_ref().map(|s| Arc::new(s.0.clone())));
         Ok(reader.finish()?)
     }
