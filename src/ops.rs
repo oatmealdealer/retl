@@ -51,13 +51,23 @@ pub enum OpItem {
     LtEq(LtEq),
     /// Apply a `list`-namespaced operation.
     List(List),
+    /// Divide by another series.
     Div(Div),
+    /// Multiply by another series.
     Mul(Mul),
+    /// Add another series.
     Add(Add),
+    /// Subtract another series.
     Sub(Sub),
+    /// Cast a series to a given datatype.
     Cast(Cast),
+    /// Apply a `struct`-namespaced operation.
     Struct(Struct),
     // Dt(Dt),
+    /// Sort elements of a series.
+    Sort(SortOptions),
+    /// Evaluate to the first element of a series.
+    First,
 }
 
 impl OpItem {
@@ -85,6 +95,8 @@ impl OpItem {
             Self::Sub(op) => op.apply(expr),
             Self::Cast(op) => op.apply(expr),
             Self::Struct(op) => op.apply(expr),
+            Self::Sort(op) => Ok(expr.sort(op.clone())),
+            Self::First => Ok(expr.first()),
         }
     }
 }
@@ -213,6 +225,8 @@ pub enum Str {
     },
     /// Pad a string column with leading zeroes.
     Zfill(u16),
+    /// Split a string column by the given expression.
+    Split(ExpressionChain),
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, Default, JsonSchema)]
@@ -268,6 +282,7 @@ impl Op for Str {
                 *infer_schema_len,
             ),
             Self::Zfill(len) => ns.zfill(lit(*len)),
+            Self::Split(expr) => ns.split(expr.expr()?),
         })
     }
 }
@@ -312,6 +327,10 @@ pub enum List {
     Filter(ExpressionChain),
     /// Return the first element of the list.
     First,
+    /// Return the last element of the list.
+    Last,
+    /// Return the length of the list.
+    Length,
 }
 
 impl Op for List {
@@ -321,6 +340,8 @@ impl Op for List {
             Self::Join(chain) => ns.join(chain.expr()?, true),
             Self::Filter(chain) => ns.eval(Expr::Column(PlSmallStr::EMPTY).filter(chain.expr()?)),
             Self::First => ns.first(),
+            Self::Last => ns.last(),
+            Self::Length => ns.len(),
         })
     }
 }
