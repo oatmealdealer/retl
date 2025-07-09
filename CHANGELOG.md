@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.1](https://github.com/oatmealdealer/retl/compare/eab4a08f5d93728e8cff3f6c672e35f05fd82fd3..v0.5.1) - 2025-07-09
+#### Bug Fixes
+- revert to `CanonicalPaths` for csv and jsonl sources - ([eab4a08](https://github.com/oatmealdealer/retl/commit/eab4a08f5d93728e8cff3f6c672e35f05fd82fd3)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.5.0](https://github.com/oatmealdealer/retl/compare/77312af6ac35c5f640528161786241260f7b87f9..v0.5.0) - 2025-07-09
 #### Features
 - add `sort`, `first` ops,  str `split` and list `last` + `length`ops - ([fae6b2f](https://github.com/oatmealdealer/retl/commit/fae6b2f962ee4d58784f556b4d57de45a044c0e0)) - [@oatmealdealer](https://github.com/oatmealdealer)
