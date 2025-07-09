@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.0](https://github.com/oatmealdealer/retl/compare/77312af6ac35c5f640528161786241260f7b87f9..v0.5.0) - 2025-07-09
+#### Features
+- add `sort`, `first` ops,  str `split` and list `last` + `length`ops - ([fae6b2f](https://github.com/oatmealdealer/retl/commit/fae6b2f962ee4d58784f556b4d57de45a044c0e0)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add `anti` join and `group_by` transform - ([0ffdf71](https://github.com/oatmealdealer/retl/commit/0ffdf711e00bc476c6930460367c9504e3c2c8e4)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add `condition` ternary expression - ([8b4e217](https://github.com/oatmealdealer/retl/commit/8b4e21769e7c52c3cf889df0cab47c93ce28d323)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add `element` expression for list evals - ([77312af](https://github.com/oatmealdealer/retl/commit/77312af6ac35c5f640528161786241260f7b87f9)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.4.0](https://github.com/oatmealdealer/retl/compare/7a3bfc23f0bc201316cccc3a92d92c486526e8f1..v0.4.0) - 2025-07-08
 #### Features
 - add `filter` and `first` list ops - ([3942317](https://github.com/oatmealdealer/retl/commit/39423173d60ea7b6c7f33ba31c2ec5d188c5bd76)) - [@oatmealdealer](https://github.com/oatmealdealer)
