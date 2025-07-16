@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.6.0](https://github.com/oatmealdealer/retl/compare/af63c7be6fa955a0fe3eade97a9741a25d473ef4..v0.6.0) - 2025-07-16
+#### Features
+- add concat transform - ([af63c7b](https://github.com/oatmealdealer/retl/commit/af63c7be6fa955a0fe3eade97a9741a25d473ef4)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.5.3](https://github.com/oatmealdealer/retl/compare/5579c5fa0ba7e98907e0b7e38b2e163046978c2e..v0.5.3) - 2025-07-09
 #### Bug Fixes
 - use overwrites for setting source schemas - ([5579c5f](https://github.com/oatmealdealer/retl/commit/5579c5fa0ba7e98907e0b7e38b2e163046978c2e)) - [@oatmealdealer](https://github.com/oatmealdealer)
