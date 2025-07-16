@@ -48,6 +48,8 @@ pub enum TransformItem {
     Collect(Collect),
     /// Run one or more aggregations on the given expressions.
     GroupBy(GroupBy),
+    /// Concatenate with another source.
+    Concat(Concat),
 }
 
 impl Transform for TransformItem {
@@ -67,6 +69,7 @@ impl Transform for TransformItem {
             Self::WithColumns(transform) => transform.transform(lf),
             Self::Collect(transform) => transform.transform(lf),
             Self::GroupBy(transform) => transform.transform(lf),
+            Self::Concat(transform) => transform.transform(lf),
         }
     }
 }
@@ -374,5 +377,38 @@ impl Transform for GroupBy {
                     .collect::<Result<Vec<Expr>>>()?
                     .as_slice(),
             ))
+    }
+}
+
+
+
+
+#[derive(Clone, Deserialize, Serialize, Debug, Default, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ConcatType {
+    #[default]
+    Vertical,
+    Horizontal,
+    Diagonal,
+}
+/// Transform data by joining it with data from another source.
+#[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
+pub struct Concat {
+    #[serde(flatten)]
+    pub loader: Loader,
+    pub how: ConcatType,
+    #[serde(default)]
+    pub args: UnionArgs,
+}
+
+impl Transform for Concat {
+    fn transform(&self, lf1: LazyFrame) -> Result<LazyFrame> {
+        let lf2 = self.loader.load()?;
+        let lf = match self.how {
+            ConcatType::Diagonal => concat_lf_diagonal([lf1, lf2], self.args.clone())?,
+            ConcatType::Horizontal => concat_lf_horizontal([lf1, lf2], self.args.clone())?,
+            ConcatType::Vertical => concat([lf1, lf2], self.args.clone())?,
+        };
+        Ok(lf)
     }
 }

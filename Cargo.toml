@@ -33,7 +33,8 @@ polars = { git = "https://github.com/oatmealdealer/polars.git", branch = "dsl-sc
     "concat_str",
     "dsl-schema",
     "polars-plan",
-    "semi_anti_join"
+    "semi_anti_join",
+    "diagonal_concat"
 ] }
 regex = "1.11.1"
 schemars = "0.8.22"
