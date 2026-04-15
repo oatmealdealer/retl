@@ -380,9 +380,6 @@ impl Transform for GroupBy {
     }
 }
 
-
-
-
 #[derive(Clone, Deserialize, Serialize, Debug, Default, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ConcatType {
@@ -394,8 +391,7 @@ pub enum ConcatType {
 /// Transform data by joining it with data from another source.
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Concat {
-    #[serde(flatten)]
-    pub loader: Loader,
+    pub sources: Vec<Loader>,
     pub how: ConcatType,
     #[serde(default)]
     pub args: UnionArgs,
@@ -403,11 +399,17 @@ pub struct Concat {
 
 impl Transform for Concat {
     fn transform(&self, lf1: LazyFrame) -> Result<LazyFrame> {
-        let lf2 = self.loader.load()?;
+        let mut lazy_frames = self
+            .sources
+            .iter()
+            .map(|source| source.load())
+            .collect::<Result<Vec<LazyFrame>>>()?;
+        lazy_frames.insert(0, lf1);
+
         let lf = match self.how {
-            ConcatType::Diagonal => concat_lf_diagonal([lf1, lf2], self.args.clone())?,
-            ConcatType::Horizontal => concat_lf_horizontal([lf1, lf2], self.args.clone())?,
-            ConcatType::Vertical => concat([lf1, lf2], self.args.clone())?,
+            ConcatType::Diagonal => concat_lf_diagonal(lazy_frames.as_slice(), self.args)?,
+            ConcatType::Horizontal => concat_lf_horizontal(lazy_frames.as_slice(), self.args)?,
+            ConcatType::Vertical => concat(lazy_frames.as_slice(), self.args)?,
         };
         Ok(lf)
     }
