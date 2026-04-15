@@ -7,7 +7,7 @@ use anyhow::Result;
 use polars::{lazy::prelude::*, prelude::*};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, ops::Deref};
+use std::{collections::HashMap, fmt::Debug, ops::Deref};
 
 /// Trait for an operation that modifies an expression supplied as input.
 pub trait Op: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
@@ -68,6 +68,8 @@ pub enum OpItem {
     Sort(SortOptions),
     /// Evaluate to the first element of a series.
     First,
+    /// Map values of an expression using a hashmap lookup. Any values not found will map to null.
+    Map(Map),
 }
 
 impl OpItem {
@@ -97,6 +99,7 @@ impl OpItem {
             Self::Struct(op) => op.apply(expr),
             Self::Sort(op) => Ok(expr.sort(op.clone())),
             Self::First => Ok(expr.first()),
+            Self::Map(op) => op.apply(expr),
         }
     }
 }
@@ -412,5 +415,46 @@ impl Op for Struct {
             Self::JsonEncode => ns.json_encode(),
             Self::Field(name) => ns.field_by_name(name),
         })
+    }
+}
+
+/// Map values of an expression using a hashmap lookup. Any values not found will map to null.
+/// Based on the Python implementation in https://github.com/pola-rs/polars/pull/5899/changes#diff-ef10367537c7d109fbc7e36f7932120da961f51d828d5f6754f3f6336d365539.
+#[derive(Clone, Serialize, Deserialize, Debug, JsonSchema)]
+pub struct Map(HashMap<String, String>);
+
+impl Op for Map {
+    fn apply(&self, mut expr: Expr) -> Result<Expr> {
+        let keys: Vec<String> = self.0.keys().into_iter().cloned().collect();
+        let values: Vec<String> = self.0.values().into_iter().cloned().collect();
+        expr = expr.map(
+            move |column| {
+                let name = column.name().clone();
+                let remap_key_column: PlSmallStr = format!("__RETL_REMAP_KEY_{name}").into();
+                let remap_value_column: PlSmallStr = format!("__RETL_REMAP_VALUE_{name}").into();
+
+                Ok(column
+                    .into_frame()
+                    .lazy()
+                    .join(
+                        DataFrame::new(vec![
+                            Column::new(remap_key_column.clone(), keys.as_slice()),
+                            Column::new(remap_value_column.clone(), values.as_slice()),
+                        ])?
+                        .lazy(),
+                        [col(name)],
+                        [col(remap_key_column)],
+                        JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+                    )
+                    .collect()?
+                    .take_columns()
+                    .into_iter()
+                    .nth(1))
+            },
+            GetOutput::from_type(datatypes::DataType::String),
+        );
+
+        Ok(expr)
+        // todo!()
     }
 }
