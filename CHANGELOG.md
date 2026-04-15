@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.7.0](https://github.com/oatmealdealer/retl/compare/86881db07cb3787e8c3dfaa0c1cf75c6fa15c3cc..v0.7.0) - 2026-04-15
+#### Features
+- add map operator - ([22ef534](https://github.com/oatmealdealer/retl/commit/22ef53496d7cfebb873cf76fb9efb48df10bb8db)) - [@oatmealdealer](https://github.com/oatmealdealer)
+- add support for TOML 1.1 - ([86881db](https://github.com/oatmealdealer/retl/commit/86881db07cb3787e8c3dfaa0c1cf75c6fa15c3cc)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.6.0](https://github.com/oatmealdealer/retl/compare/af63c7be6fa955a0fe3eade97a9741a25d473ef4..v0.6.0) - 2025-07-16
 #### Features
 - add concat transform - ([af63c7b](https://github.com/oatmealdealer/retl/commit/af63c7be6fa955a0fe3eade97a9741a25d473ef4)) - [@oatmealdealer](https://github.com/oatmealdealer)
