@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.8.0](https://github.com/oatmealdealer/retl/compare/3f3a702c4feb4cd6a76714df84dedfe571985dcf..v0.8.0) - 2026-04-15
+#### Features
+- allow passing multiple sources to concat - ([3f3a702](https://github.com/oatmealdealer/retl/commit/3f3a702c4feb4cd6a76714df84dedfe571985dcf)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.7.0](https://github.com/oatmealdealer/retl/compare/86881db07cb3787e8c3dfaa0c1cf75c6fa15c3cc..v0.7.0) - 2026-04-15
 #### Features
 - add map operator - ([22ef534](https://github.com/oatmealdealer/retl/commit/22ef53496d7cfebb873cf76fb9efb48df10bb8db)) - [@oatmealdealer](https://github.com/oatmealdealer)
