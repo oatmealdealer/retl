@@ -50,6 +50,8 @@ pub enum TransformItem {
     GroupBy(GroupBy),
     /// Concatenate with another source.
     Concat(Concat),
+    /// Limit data to the first N rows.
+    Limit(u32),
 }
 
 impl Transform for TransformItem {
@@ -70,6 +72,7 @@ impl Transform for TransformItem {
             Self::Collect(transform) => transform.transform(lf),
             Self::GroupBy(transform) => transform.transform(lf),
             Self::Concat(transform) => transform.transform(lf),
+            Self::Limit(n) => Ok(lf.limit(*n)),
         }
     }
 }
