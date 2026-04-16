@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.9.0](https://github.com/oatmealdealer/retl/compare/bf99959142f30fc5a49298e72ff7b4125fc61524..v0.9.0) - 2026-04-16
+#### Features
+- add limit transform - ([bf99959](https://github.com/oatmealdealer/retl/commit/bf99959142f30fc5a49298e72ff7b4125fc61524)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.8.1](https://github.com/oatmealdealer/retl/compare/502c54209a5a4730cf149238c3deea54052ab60c..v0.8.1) - 2026-04-16
 #### Bug Fixes
 - ![BREAKING](https://img.shields.io/badge/BREAKING-red) un-flatten & rename SourceItem to play nice with schemars - ([502c542](https://github.com/oatmealdealer/retl/commit/502c54209a5a4730cf149238c3deea54052ab60c)) - [@oatmealdealer](https://github.com/oatmealdealer)
