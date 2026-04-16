@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.8.1](https://github.com/oatmealdealer/retl/compare/502c54209a5a4730cf149238c3deea54052ab60c..v0.8.1) - 2026-04-16
+#### Bug Fixes
+- ![BREAKING](https://img.shields.io/badge/BREAKING-red) un-flatten & rename SourceItem to play nice with schemars - ([502c542](https://github.com/oatmealdealer/retl/commit/502c54209a5a4730cf149238c3deea54052ab60c)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.8.0](https://github.com/oatmealdealer/retl/compare/3f3a702c4feb4cd6a76714df84dedfe571985dcf..v0.8.0) - 2026-04-15
 #### Features
 - allow passing multiple sources to concat - ([3f3a702](https://github.com/oatmealdealer/retl/commit/3f3a702c4feb4cd6a76714df84dedfe571985dcf)) - [@oatmealdealer](https://github.com/oatmealdealer)
