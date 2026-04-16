@@ -25,7 +25,7 @@ pub trait Source: Serialize + for<'a> Deserialize<'a> + JsonSchema + Debug {
 /// Available sources that can be used in configuration files.
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum SourceItem {
+pub enum DataSource {
     /// Load data from CSV.
     Csv(CsvSource),
     /// Load data from newline-delimited JSON files.
@@ -54,7 +54,7 @@ pub enum SourceItem {
     Inline(InlineSource),
 }
 
-impl Source for SourceItem {
+impl Source for DataSource {
     fn load(&self) -> Result<LazyFrame> {
         match self {
             Self::Csv(source) => source.load(),
@@ -71,8 +71,7 @@ impl Source for SourceItem {
 #[derive(Clone, Deserialize, Serialize, Debug, JsonSchema)]
 pub struct Loader {
     /// The source to load data from.
-    #[serde(flatten)]
-    pub source: SourceItem,
+    pub data: DataSource,
     /// Which transformations, if any, to apply to the data before returning it.
     #[serde(default)]
     pub transforms: Vec<TransformItem>,
@@ -80,7 +79,7 @@ pub struct Loader {
 
 impl Loader {
     pub(crate) fn load(&self) -> Result<LazyFrame> {
-        let mut lf = self.source.load()?;
+        let mut lf = self.data.load()?;
         for transform in self.transforms.iter() {
             lf = transform.transform(lf)?;
         }

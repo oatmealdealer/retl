@@ -6,7 +6,7 @@ use std::{io::Write, path::PathBuf};
 use anyhow::Result;
 use clap::Parser;
 use retl::{
-    sources::{Schema, SourceItem},
+    sources::{Schema, DataSource},
     Config,
 };
 use schemars::schema_for;
@@ -39,17 +39,17 @@ fn main() -> Result<()> {
                 let schema = config.load()?.collect_schema()?.as_ref().clone();
                 let mut writer = std::fs::File::create(path)?;
                 let mut source = config.source.clone();
-                match &mut source.source {
-                    SourceItem::Csv(source) => {
+                match &mut source.data {
+                    DataSource::Csv(source) => {
                         source.schema = Some(Schema(schema));
                     }
-                    SourceItem::Json(source) => {
+                    DataSource::Json(source) => {
                         source.schema = Some(Schema(schema));
                     }
-                    SourceItem::JsonLine(source) => {
+                    DataSource::JsonLine(source) => {
                         source.schema = Some(Schema(schema));
                     }
-                    SourceItem::Parquet(source) => {
+                    DataSource::Parquet(source) => {
                         source.schema = Some(Schema(schema));
                     }
                     _ => {
