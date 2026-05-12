@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.10.0](https://github.com/oatmealdealer/retl/compare/421b806635e565df93c58c7c26da3c2b1cd88720..v0.10.0) - 2026-05-12
+#### Features
+- add parquet export - ([421b806](https://github.com/oatmealdealer/retl/commit/421b806635e565df93c58c7c26da3c2b1cd88720)) - [@oatmealdealer](https://github.com/oatmealdealer)
+
+- - -
+
 ## [v0.9.0](https://github.com/oatmealdealer/retl/compare/bf99959142f30fc5a49298e72ff7b4125fc61524..v0.9.0) - 2026-04-16
 #### Features
 - add limit transform - ([bf99959](https://github.com/oatmealdealer/retl/commit/bf99959142f30fc5a49298e72ff7b4125fc61524)) - [@oatmealdealer](https://github.com/oatmealdealer)
