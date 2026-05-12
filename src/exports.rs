@@ -29,6 +29,8 @@ pub enum ExportItem {
     NdJson(NdJsonExport),
     /// Collect and serialize the dataframe itself to a single JSON object. You probably don't need this.
     Json(JsonExport),
+    /// Export data to Parquet.
+    Parquet(ParquetExport),
 }
 
 impl ExportItem {
@@ -37,6 +39,7 @@ impl ExportItem {
             Self::Csv(export) => export.export(lf),
             Self::NdJson(export) => export.export(lf),
             Self::Json(export) => export.export(lf),
+            Self::Parquet(export) => export.export(lf),
         }
     }
 }
@@ -158,6 +161,43 @@ impl Export for JsonExport {
         let file = std::fs::File::create(self.folder.join(filename))?;
         let df = lf.collect()?;
         serde_json::to_writer(file, &df)?;
+        Ok(())
+    }
+}
+
+/// Export data to Parquet.
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
+pub struct ParquetExport {
+    /// Folder in which to create files.
+    pub folder: PathBuf,
+    /// Name of the output file, not including the file extension.
+    pub name: String,
+    /// Optional format string to append the current time to the filename -
+    /// refer to <https://docs.rs/chrono/latest/chrono/format/strftime/index.html> for available format codes.
+    pub date_format: Option<String>,
+}
+
+impl Export for ParquetExport {
+    fn export(&self, lf: LazyFrame) -> Result<()> {
+        std::fs::create_dir_all(&self.folder)?;
+        let mut filename = String::new();
+        filename.write_str(&self.name)?;
+        if let Some(fstring) = &self.date_format {
+            filename.write_str(
+                &chrono::Local::now()
+                    .naive_local()
+                    .format(&fstring)
+                    .to_string(),
+            )?
+        }
+        filename.write_str(".parquet")?;
+        lf.sink_parquet(
+            SinkTarget::Path(PlPath::Local(self.folder.join(filename).into())),
+            ParquetWriteOptions::default(),
+            None,
+            SinkOptions::default(),
+        )?
+        .collect()?;
         Ok(())
     }
 }
